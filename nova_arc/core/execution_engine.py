@@ -15,7 +15,16 @@ class ExecutionEngine:
                 "args": step.args,
                 "rationale": step.rationale,
             })
-            result = tool.execute(step.args)
+            try:
+                result = tool.execute(step.args)
+            except Exception as exc:
+                result = ToolExecutionResult(
+                    tool=step.tool,
+                    args=step.args,
+                    success=False,
+                    output=f"Tool execution failed: {type(exc).__name__}: {exc}",
+                    category=getattr(tool, "category", "unknown"),
+                )
             replay_store.log("tool_invocation_completed", {
                 "tool": result.tool,
                 "success": result.success,
