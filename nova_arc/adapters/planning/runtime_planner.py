@@ -22,7 +22,8 @@ class RuntimePlannerAdapter(PlannerAdapter):
                 payload={
                     "system_prompt": (
                         "You are an autonomous incident commander. Return ONLY valid JSON with keys intent, strategy, steps, fallback. "
-                        "Every step must include tool, args, rationale, expected_effect. Use only allowed tools."
+                        "Every step must include tool, args, rationale, expected_effect. Use only allowed tools. "
+                        "Use argument names exactly as listed in each allowed tool description."
                     ),
                     "messages": [
                         {

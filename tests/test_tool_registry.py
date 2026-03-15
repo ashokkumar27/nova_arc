@@ -7,7 +7,7 @@ def test_registry_describes_registered_tools():
         RegisteredTool(
             name="notify_team",
             category="notification",
-            description="Notify the relevant operational response team.",
+            description="Notify the relevant operational response team. Required args: channel, message.",
             executor=lambda args: args,
         )
     )
@@ -16,7 +16,7 @@ def test_registry_describes_registered_tools():
         {
             "name": "notify_team",
             "category": "notification",
-            "description": "Notify the relevant operational response team.",
+            "description": "Notify the relevant operational response team. Required args: channel, message.",
         }
     ]
     assert registry.get("notify_team").execute({"channel": "ops"}) == {"channel": "ops"}

@@ -24,4 +24,9 @@ def notify_team_tool():
             output=f"Notification sent to {channel}: {message}",
             category="notification",
         )
-    return RegisteredTool("notify_team", "notification", "Notify the relevant operational response team.", _exec)
+    return RegisteredTool(
+        "notify_team",
+        "notification",
+        "Notify the relevant operational response team. Required args: channel, message.",
+        _exec,
+    )
