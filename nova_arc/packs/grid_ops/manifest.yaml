@@ -1,0 +1,41 @@
+pack_id: grid_ops
+name: Grid Operations Command Center
+
+directive:
+  prime_directive: Prevent asset destruction and avoid cascading power outages.
+  objectives:
+    - Reduce electrical stress
+    - Isolate failing assets
+    - Maintain operational continuity
+
+perception:
+  adapters:
+    - telemetry
+    - voice
+    - image
+    - document
+
+policy:
+  approval_threshold: 85
+  mandatory_notify_threshold: 90
+  blocked_tool_categories: []
+
+tools:
+  allowlist:
+    - shed_load
+    - isolate_transformer
+    - dispatch_field_engineer
+    - notify_team
+
+verification:
+  success_conditions:
+    - load_shed
+    - transformer_isolated
+    - engineer_dispatched
+  residual_risk_target: 35
+
+reporting:
+  template: incident_replay
+
+surface:
+  layout: ops_command_center_v1

@@ -1,0 +1,41 @@
+pack_id: cold_chain
+name: Pharma Cold Chain Command Center
+
+directive:
+  prime_directive: Protect product integrity, patient safety, and compliance.
+  objectives:
+    - Contain temperature excursions
+    - Prevent release of compromised inventory
+    - Maintain auditability
+
+perception:
+  adapters:
+    - telemetry
+    - voice
+    - image
+    - document
+
+policy:
+  approval_threshold: 80
+  mandatory_notify_threshold: 85
+  blocked_tool_categories: []
+
+tools:
+  allowlist:
+    - start_backup_cooling
+    - quarantine_batch
+    - divert_shipment
+    - notify_team
+
+verification:
+  success_conditions:
+    - chamber_stabilized
+    - batch_quarantined
+    - shipment_diverted
+  residual_risk_target: 30
+
+reporting:
+  template: compliance_incident_replay
+
+surface:
+  layout: ops_command_center_v1
