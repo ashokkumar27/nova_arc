@@ -49,6 +49,7 @@ Nova A.R.C. ColdChain Live is a pack-driven incident command center built for a 
    - `AWS_BEARER_TOKEN_BEDROCK`, or
    - standard AWS credentials
 4. Optionally set `SLACK_WEBHOOK_URL` for a real notification path.
+5. If you prefer email, set `NOTIFICATION_PROVIDER=resend` plus `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and `RESEND_TO_EMAIL`.
 
 ## Run with uv
 
@@ -102,6 +103,9 @@ See [`.env.example`](/c:/Users/user/nova_arc/.env.example) for the full list. Th
 - `AWS_BEARER_TOKEN_BEDROCK`
 - `BACKEND_URL`
 - `SLACK_WEBHOOK_URL`
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
+- `RESEND_TO_EMAIL`
 
 ## Tests
 

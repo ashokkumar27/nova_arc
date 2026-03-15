@@ -3,6 +3,7 @@ from __future__ import annotations
 from email.message import EmailMessage
 import json
 import smtplib
+from hashlib import sha1
 from urllib import request as urllib_request
 
 from nova_arc.core.mission_profile import ToolExecutionResult
@@ -10,18 +11,23 @@ from nova_arc.core.mission_profile import ToolExecutionResult
 from .registry import RegisteredTool
 
 
-def _post_json(url: str, payload: dict) -> None:
+def _post_json(url: str, payload: dict, headers: dict | None = None) -> dict:
     req = urllib_request.Request(
         url=url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", **(headers or {})},
         method="POST",
     )
-    with urllib_request.urlopen(req):
-        return None
+    with urllib_request.urlopen(req) as response:
+        body = response.read().decode("utf-8").strip()
+    return json.loads(body) if body else {}
 
 
-def _dispatch_notification(config, provider: str, channel: str, message: str) -> dict:
+def _resend_recipients(raw_value: str) -> list[str]:
+    return [item.strip() for item in raw_value.split(",") if item.strip()]
+
+
+def _dispatch_notification(config, provider: str, channel: str, message: str, incident_id: str | None = None) -> dict:
     provider = (provider or config.notification_provider or "slack").lower()
 
     if provider == "slack" and config.slack_webhook_url:
@@ -36,6 +42,29 @@ def _dispatch_notification(config, provider: str, channel: str, message: str) ->
         telegram_url = f"https://api.telegram.org/bot{config.telegram_bot_token}/sendMessage"
         _post_json(telegram_url, {"chat_id": config.telegram_chat_id, "text": f"[{channel}] {message}"})
         return {"provider": "telegram", "external_status": "sent"}
+
+    if provider == "resend" and config.resend_api_key and config.resend_from_email and config.resend_to_email:
+        idempotency_key = f"nova-arc-{incident_id or channel}-{sha1(message.encode('utf-8')).hexdigest()[:12]}"
+        resend_payload = {
+            "from": config.resend_from_email,
+            "to": _resend_recipients(config.resend_to_email),
+            "subject": f"Nova A.R.C. Alert | {channel}",
+            "text": message,
+            "html": f"<strong>Nova A.R.C. Alert</strong><p>{message}</p>",
+        }
+        resend_response = _post_json(
+            "https://api.resend.com/emails",
+            resend_payload,
+            headers={
+                "Authorization": f"Bearer {config.resend_api_key}",
+                "Idempotency-Key": idempotency_key,
+            },
+        )
+        return {
+            "provider": "resend",
+            "external_status": "sent",
+            "message_id": resend_response.get("id"),
+        }
 
     if provider == "email" and config.smtp_host and config.email_from and config.email_to:
         email_message = EmailMessage()
@@ -67,7 +96,13 @@ def notify_team_tool(backend_client, config, pack_id: str):
 
         provider = args.get("provider") or config.notification_provider
         try:
-            delivery = _dispatch_notification(config, provider, args["channel"], args["message"])
+            delivery = _dispatch_notification(
+                config,
+                provider,
+                args["channel"],
+                args["message"],
+                incident_id=args.get("incident_id"),
+            )
             backend_result = backend_client.record_notification(
                 pack_id=pack_id,
                 channel=args["channel"],
@@ -96,7 +131,7 @@ def notify_team_tool(backend_client, config, pack_id: str):
     return RegisteredTool(
         "notify_team",
         "notification",
-        "Notify the incident response team through a configured webhook or email path. Required args: channel, message.",
+        "Notify the incident response team through a configured webhook or email path, including Resend email delivery. Required args: channel, message.",
         _exec,
         input_schema={
             "type": "object",

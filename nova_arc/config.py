@@ -35,6 +35,9 @@ class AppConfig:
     backend_db_path: str
     admin_portal_base_url: str
     notification_provider: str
+    resend_api_key: str
+    resend_from_email: str
+    resend_to_email: str
     slack_webhook_url: str
     teams_webhook_url: str
     telegram_bot_token: str
@@ -61,6 +64,9 @@ class AppConfig:
             backend_db_path=os.getenv("BACKEND_DB_PATH", str(DEFAULT_DB_PATH)),
             admin_portal_base_url=os.getenv("ADMIN_PORTAL_BASE_URL", "http://127.0.0.1:8000/admin"),
             notification_provider=os.getenv("NOTIFICATION_PROVIDER", "slack"),
+            resend_api_key=os.getenv("RESEND_API_KEY", ""),
+            resend_from_email=os.getenv("RESEND_FROM_EMAIL", os.getenv("EMAIL_FROM", "")),
+            resend_to_email=os.getenv("RESEND_TO_EMAIL", os.getenv("EMAIL_TO", "")),
             slack_webhook_url=os.getenv("SLACK_WEBHOOK_URL", ""),
             teams_webhook_url=os.getenv("TEAMS_WEBHOOK_URL", ""),
             telegram_bot_token=os.getenv("TELEGRAM_BOT_TOKEN", ""),
