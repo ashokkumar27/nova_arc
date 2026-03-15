@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-from .mission_profile import ActionPlan, MissionProfile, PerceivedState
+from .mission_profile import MissionProfile, PerceivedState, ActionPlan
 
 
 class PolicyEngine:
@@ -10,6 +8,7 @@ class PolicyEngine:
     def evaluate_state(self, profile: MissionProfile, state: PerceivedState) -> dict:
         requires_approval = state.risk_score >= profile.approval_threshold
         mandatory_notify = state.risk_score >= profile.mandatory_notify_threshold
+
         return {
             "requires_approval": requires_approval,
             "approval_reason": "Risk exceeds approval threshold" if requires_approval else None,
@@ -17,13 +16,20 @@ class PolicyEngine:
         }
 
     def validate_plan(self, profile: MissionProfile, plan: ActionPlan, tool_registry) -> None:
+        allowed = set(profile.allowed_tools)
+
         for step in plan.steps:
+            if step.tool not in allowed:
+                raise PermissionError(
+                    f"Planner returned forbidden tool '{step.tool}' for pack '{profile.pack_id}'. "
+                    f"Allowed tools: {sorted(allowed)}"
+                )
+
             tool = tool_registry.get(step.tool)
-            if step.tool not in profile.allowed_tools:
-                raise PermissionError(f"Tool '{step.tool}' is not allowed for pack '{profile.pack_id}'")
+
             if tool.category in profile.blocked_tool_categories:
                 raise PermissionError(
-                    f"Tool '{step.tool}' blocked by category '{tool.category}'"
+                    f"Tool '{step.tool}' blocked by policy category '{tool.category}'"
                 )
 
     def approve(self, plan: ActionPlan) -> bool:

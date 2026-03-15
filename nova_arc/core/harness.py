@@ -1,8 +1,6 @@
-from __future__ import annotations
-
-from .execution_engine import ExecutionEngine
-from .policy_engine import PolicyEngine
 from .replay_store import ReplayStore
+from .policy_engine import PolicyEngine
+from .execution_engine import ExecutionEngine
 from .verifier import Verifier
 
 
@@ -21,10 +19,25 @@ class MissionHarness:
         self.planner = planner_adapter
         self.tool_registry = tool_registry
         self.surface = surface_adapter
+
         self.replay = ReplayStore()
         self.policy = PolicyEngine(auto_approve=auto_approve)
         self.executor = ExecutionEngine()
         self.verifier = Verifier()
+
+    def _sanitize_plan(self, plan):
+        allowed = set(self.profile.allowed_tools)
+        filtered_steps = [step for step in plan.steps if step.tool in allowed]
+        removed = [step.tool for step in plan.steps if step.tool not in allowed]
+
+        if removed:
+            self.replay.log("plan_sanitized", {
+                "removed_forbidden_tools": removed,
+                "allowed_tools": sorted(allowed),
+            })
+
+        plan.steps = filtered_steps
+        return plan
 
     def run(self, payload: dict):
         self.replay.log("mission_started", {
@@ -32,31 +45,44 @@ class MissionHarness:
             "name": self.profile.name,
             "directive": self.profile.prime_directive,
         })
+
         state = self.perception.normalize(payload, self.profile)
         self.replay.log("state_normalized", {
             "summary": state.situation_summary,
             "risk_score": state.risk_score,
             "hazards": state.hazards,
         })
+
         policy_context = self.policy.evaluate_state(self.profile, state)
         self.replay.log("policy_evaluated", policy_context)
-        plan = self.planner.plan(state, self.profile, policy_context, self.tool_registry)
+
+        allowed_tool_registry = self.tool_registry.subset(self.profile.allowed_tools)
+
+        plan = self.planner.plan(state, self.profile, policy_context, allowed_tool_registry)
+        plan = self._sanitize_plan(plan)
+
         self.replay.log("plan_created", {
             "intent": plan.intent,
             "strategy": plan.strategy,
             "steps": [s.tool for s in plan.steps],
         })
-        self.replay.log("planner_debug", {
-            "raw_output": getattr(self.planner, "last_raw_output", None),
-            "usage": getattr(self.planner, "last_usage", {}),
-            "error": getattr(self.planner, "last_error", None),
-        })
-        self.policy.validate_plan(self.profile, plan, self.tool_registry)
+
+        if not plan.steps:
+            raise ValueError(
+                f"Planner produced no valid steps for pack '{self.profile.pack_id}'. "
+                f"Allowed tools were: {self.profile.allowed_tools}"
+            )
+
+        self.policy.validate_plan(self.profile, plan, allowed_tool_registry)
+
         approved = self.policy.approve(plan)
         self.replay.log("approval_result", {"approved": approved})
+
         if not approved:
             return self.surface.publish_abort(self.profile, state, plan, self.replay.all())
-        results = self.executor.execute(plan, self.tool_registry, self.replay)
+
+        results = self.executor.execute(plan, allowed_tool_registry, self.replay)
+
         verification = self.verifier.verify(self.profile, state, results)
         self.replay.log("verification_completed", {
             "success": verification.success,
@@ -64,10 +90,12 @@ class MissionHarness:
             "achieved_conditions": verification.achieved_conditions,
             "missed_conditions": verification.missed_conditions,
         })
-        published = self.surface.publish(self.profile, state, plan, results, verification, self.replay.all())
-        published["debug"] = {
-            "planner_raw_output": getattr(self.planner, "last_raw_output", None),
-            "planner_usage": getattr(self.planner, "last_usage", {}),
-            "planner_error": getattr(self.planner, "last_error", None),
-        }
-        return published
+
+        return self.surface.publish(
+            self.profile,
+            state,
+            plan,
+            results,
+            verification,
+            self.replay.all(),
+        )

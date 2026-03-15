@@ -1,23 +1,16 @@
-from __future__ import annotations
-
-from dataclasses import dataclass
-from typing import Callable, Dict, List
-
-
-@dataclass
 class RegisteredTool:
-    name: str
-    category: str
-    description: str
-    executor: Callable[[dict], object]
+    def __init__(self, name, category, executor):
+        self.name = name
+        self.category = category
+        self._executor = executor
 
-    def execute(self, args: dict):
-        return self.executor(args)
+    def execute(self, args):
+        return self._executor(args)
 
 
 class ToolRegistry:
     def __init__(self):
-        self._tools: Dict[str, RegisteredTool] = {}
+        self._tools = {}
 
     def register(self, tool: RegisteredTool):
         self._tools[tool.name] = tool
@@ -27,8 +20,12 @@ class ToolRegistry:
             raise KeyError(f"Tool '{name}' not registered")
         return self._tools[name]
 
-    def describe_all(self) -> List[dict]:
-        return [
-            {"name": t.name, "category": t.category, "description": t.description}
-            for t in self._tools.values()
-        ]
+    def names(self):
+        return list(self._tools.keys())
+
+    def subset(self, allowed_names):
+        subset_registry = ToolRegistry()
+        for name in allowed_names:
+            if name in self._tools:
+                subset_registry.register(self._tools[name])
+        return subset_registry
