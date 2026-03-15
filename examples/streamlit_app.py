@@ -62,6 +62,11 @@ def run_pack(pack_id: str, scenario: str, context: str, mode: str):
         auto_approve=True,
     )
     output = harness.run({"scenario": scenario, "context": context, "input_type": "voice" if mode == "live_bridge" else "text"})
+    output["debug"] = {
+        "planner_usage": getattr(harness.planner, "last_usage", {}) or {},
+        "planner_raw_output": getattr(harness.planner, "last_raw_output", None),
+        "planner_error": getattr(harness.planner, "last_error", None),
+    }
     output["bridge_health"] = bridges.health()
     output["runtime_mode"] = mode
     return output
