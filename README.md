@@ -1,6 +1,6 @@
 # Nova A.R.C. ColdChain Live
 
-Nova A.R.C. ColdChain Live is a pack-driven incident command center built for a filmable Amazon Nova hackathon submission. It grounds a spoken cold-chain incident with multimodal evidence, plans a policy-aware response with Amazon Bedrock Converse, executes real tools against a SQLite-backed FastAPI service, verifies backend outcomes, and exports a replayable mission report.
+Nova A.R.C. ColdChain Live is a pack-driven incident command center built for Amazon Nova hackathon submission. It grounds a spoken cold-chain incident with multimodal evidence, plans a policy-aware response with Amazon Bedrock Converse, executes real tools against a SQLite-backed FastAPI service, verifies backend outcomes, and exports a replayable mission report.
 
 ## What is in this branch
 
