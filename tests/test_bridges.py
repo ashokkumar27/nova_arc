@@ -17,6 +17,25 @@ def test_embedding_bridge_search_returns_evidence_cards(backend_client, config):
     assert "font-size" not in snippets
 
 
+def test_embedding_bridge_live_failure_keeps_local_evidence(backend_client, config):
+    router = build_bridge_router(mode="demo", config=config, backend_client=backend_client)
+    router.retrieval.enabled = True
+    router.retrieval._client = object()
+
+    def _raise(*args, **kwargs):
+        raise ValueError("mock live embedding failure")
+
+    router.retrieval._rerank_with_bedrock = _raise
+    resp = router.retrieval.invoke(
+        BridgeRequest(operation="search", payload={"query": {"type": "text", "content": "Zone B temperature batch VX-204"}}, pack_id="cold_chain")
+    )
+
+    assert resp.ok
+    assert len(resp.result["matches"]) == 4
+    assert resp.result["trace"]["embedding_fallback"] == "local-ranking-retained"
+    assert "embedding_error" in resp.result["trace"]
+
+
 def test_nova_act_bridge_runs_local_admin_workflow(backend_client, config):
     incident = backend_client.ingest_incident(
         pack_id="cold_chain",

@@ -49,7 +49,11 @@ class MultimodalEmbeddingBridge(RuntimeBridge):
                 top_k=int(query.get("top_k", 4)),
             )
             if self.enabled and self._client is not None:
-                result = self._rerank_with_bedrock(result, query_text)
+                try:
+                    result = self._rerank_with_bedrock(result, query_text)
+                except Exception as exc:
+                    result.setdefault("trace", {})["embedding_error"] = f"{type(exc).__name__}: {exc}"
+                    result.setdefault("trace", {})["embedding_fallback"] = "local-ranking-retained"
             return BridgeResponse(True, self.backend_name, request.operation, result)
         except Exception as exc:
             return BridgeResponse(False, self.backend_name, request.operation, {}, error=f"{type(exc).__name__}: {exc}")
@@ -57,7 +61,10 @@ class MultimodalEmbeddingBridge(RuntimeBridge):
     def _embed_text(self, text: str) -> list[float]:
         body = {
             "inputText": text,
-            "embeddingConfig": {"outputEmbeddingLength": 256},
+            "taskType": "TEXT_SIMILARITY",
+            "dimensions": 256,
+            "embeddingTypes": ["float"],
+            "singleEmbeddingParams": {"text": text},
         }
         response = self._client.invoke_model(
             modelId=self.model_id,
@@ -66,10 +73,12 @@ class MultimodalEmbeddingBridge(RuntimeBridge):
             accept="application/json",
         )
         payload = json.loads(response["body"].read())
-        embeddings = payload.get("embeddingsByType", {}) or {}
-        vector = embeddings.get("text")
+        embeddings = payload.get("embeddings") or []
+        vector = None
+        if embeddings:
+            vector = embeddings[0].get("embedding")
         if not vector:
-            raise ValueError("Embeddings response did not contain a text vector.")
+            raise ValueError("Embeddings response did not contain a vector in payload['embeddings'][0]['embedding'].")
         return vector
 
     def _cosine_similarity(self, left: list[float], right: list[float]) -> float:
@@ -98,4 +107,5 @@ class MultimodalEmbeddingBridge(RuntimeBridge):
         reranked.sort(key=lambda item: item["score"], reverse=True)
         result["matches"] = reranked
         result.setdefault("trace", {})["embedding_model_id"] = self.model_id
+        result.setdefault("trace", {})["embedding_backend"] = "bedrock-live-rerank"
         return result
