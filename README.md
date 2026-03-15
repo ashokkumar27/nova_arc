@@ -1,35 +1,135 @@
-# Nova A.R.C. ColdChain Live
+# Nova A.R.C. Command Center
 
-Nova A.R.C. ColdChain Live is a pack-driven incident command center built for the Amazon Nova hackathon. It turns a spoken cold-chain incident into a grounded, policy-aware response: voice intake is normalized, evidence is retrieved, Amazon Nova generates a constrained action plan, tools execute against a real backend, outcomes are verified, and the full mission is replayed in a premium Streamlit interface.
+A voice-first, multimodal incident command center built on Amazon Nova.
 
-## Executive Summary
+Nova A.R.C. is a `pack-driven agentic harness` that detects operational incidents, grounds them with evidence, plans the next best actions, executes approved tools, verifies outcomes, and produces a replayable audit trail.
 
-This project is designed to feel close to a real operational command center rather than a slideware demo:
+Instead of building a different app for every domain, Nova A.R.C. loads a different `mission pack` and keeps the same runtime:
 
-- `Amazon Bedrock Runtime` powers the planner through `Converse`
-- `Amazon Nova 2 Sonic` is represented through a transcript-first voice ingress bridge
-- `Amazon Nova Multimodal Embeddings` is represented through a bridge-compatible retrieval layer over SOPs, screenshots, logs, and prior incidents
-- `Amazon Nova Act` is represented through a local admin-portal workflow bridge for browser-style actions
-- `FastAPI + SQLite` persist all visible state changes
-- `Streamlit` presents the command center, replay, verification, and exports
-- `Cold Chain` is the hero pack and `Grid Ops` proves the harness is reusable
+- same harness
+- different directive
+- different tools
+- different verification rules
+- same command-center experience
 
-## What The System Does
+## Why This Exists
 
-The primary scenario is a warehouse cold-chain incident:
+Most AI demos stop at recommendations.
+
+Nova A.R.C. goes further:
+
+1. ingests an incident
+2. grounds it with multimodal evidence
+3. plans with Amazon Nova
+4. executes allowed tools
+5. verifies success
+6. shows a replay timeline
+
+This makes it suitable for future command-center use cases such as:
+
+- cold-chain / warehouse exception handling
+- grid operations incident response
+- logistics exception management
+- future operations centers that need policy-aware, agentic action loops
+
+## Core Use Case
+
+### ColdChain Live
+
+The primary demo use case is a cold-chain / warehouse exception command center.
+
+Example incident:
 
 > "Zone B temperature is above threshold. Batch VX-204 may be affected. Shipment SHP-884 is loading now."
 
-From that input, the system:
+The system then:
 
-1. Captures the incident through the Nova Sonic bridge contract
-2. Grounds the mission with multimodal evidence
-3. Builds a pack-scoped plan with Bedrock Converse
-4. Executes real tool actions against a local backend
-5. Verifies conditions such as chamber stabilization, batch quarantine, and shipment hold/diversion
-6. Produces a replay timeline plus JSON and Markdown exports
+- ingests the incident
+- retrieves supporting evidence
+- generates a plan
+- executes safe actions such as:
+  - start backup cooling
+  - quarantine batch
+  - hold or divert shipment
+  - notify on-call
+- verifies the result
+- produces a replayable incident log
+
+### Grid Ops
+
+A secondary pack proves the harness is reusable across domains with the same runtime but different mission constraints.
+
+## Amazon Nova Usage
+
+Nova A.R.C. is designed around Amazon Nova-native capabilities:
+
+### 1. Amazon Bedrock + Nova Planner
+
+Used for:
+
+- incident reasoning
+- strategy generation
+- tool-aware planning
+- report and replay synthesis
+
+### 2. Amazon Nova 2 Sonic Bridge
+
+Used for:
+
+- voice ingestion
+- real-time conversational incident intake
+- future live speech workflows
+
+### 3. Amazon Nova Multimodal Embeddings Bridge
+
+Used for:
+
+- evidence retrieval across:
+  - SOP documents
+  - screenshots / images
+  - logs
+  - prior incidents
+
+### 4. Amazon Nova Act Bridge
+
+Used for:
+
+- browser workflow automation
+- future UI-based command execution against legacy portals
+
+> Current state:
+> - `Bedrock` live planner path is real-ready
+> - `Nova 2 Sonic` and `Nova Act` are integrated as clean bridge contracts
+> - this keeps the harness stable while allowing real backend upgrades later
 
 ## Architecture
+
+Nova A.R.C. is implemented as a `mission harness`, not a single-purpose agent.
+
+### Stable Core
+
+- `MissionProfile`
+- `PackLoader`
+- `MissionHarness`
+- `PolicyEngine`
+- `ReplayStore`
+- `Verifier`
+- `ToolRegistry`
+- `SurfaceAdapter`
+
+### Replaceable Bridges
+
+- `BedrockConverseBridge`
+- `NovaSonicBridge`
+- `MultimodalEmbeddingBridge`
+- `NovaActBridge`
+
+### Mission Packs
+
+- `cold_chain`
+- `grid_ops`
+
+This means future command centers can be configured instead of rewritten.
 
 ### High-Level Architecture
 
@@ -66,26 +166,6 @@ flowchart LR
     BackendAPI --> Admin[Local Demo Admin Portal]
     BackendAPI --> Evidence[Seeded Evidence Files]
 ```
-
-### Core Runtime Abstractions
-
-The project keeps the harness abstractions intact:
-
-- `MissionProfile`
-- `PackLoader`
-- `MissionHarness`
-- `PolicyEngine`
-- `ReplayStore`
-- `Verifier`
-- `ToolRegistry`
-- `SurfaceAdapter`
-
-And it preserves the bridge abstractions:
-
-- `BedrockConverseBridge`
-- `NovaSonicBridge`
-- `MultimodalEmbeddingBridge`
-- `NovaActBridge`
 
 ## Process Flow
 
@@ -134,18 +214,51 @@ sequenceDiagram
 7. Export the replay report
 8. Switch briefly to the `Grid Ops Proof` pack
 
-## Amazon Nova Alignment
+## Runtime Modes
 
-This project is intentionally mapped to the hackathon categories:
+The app supports three runtime modes:
+
+### `demo`
+
+Deterministic local behavior for reliable demos and UI testing.
+
+### `live_bedrock`
+
+Uses Amazon Bedrock for live planning and reasoning.
+
+### `live_bridge`
+
+Designed for future external bridge-based execution paths such as Nova Act and Nova 2 Sonic.
+
+## UI Highlights
+
+The Streamlit command center includes:
+
+- mission header
+- prime directive
+- runtime mode
+- model display
+- bridge health
+- situation overview
+- evidence grounding
+- planned intervention
+- action execution view
+- verification panel
+- replay timeline
+- debug panel with raw planner output
+
+## Hackathon Alignment
+
+The current implementation maps cleanly to the Amazon Nova hackathon categories:
 
 - `Agentic AI`
-  - Bedrock Converse generates a structured plan with pack-scoped tools
+  - Bedrock Converse generates a structured, pack-scoped plan with tool constraints
 - `Multimodal Understanding`
-  - retrieval covers documents, images, logs, and prior incident notes
+  - retrieval spans documents, screenshots, logs, and prior incidents
 - `UI Automation`
-  - Nova Act bridge routes quarantine and shipment-hold workflows through a local admin portal
+  - Nova Act bridge routes safe admin workflows through a local portal
 - `Voice AI`
-  - Nova Sonic bridge defines the voice ingress contract and transcript event stream
+  - Nova Sonic bridge defines the voice-ingress event model and transcript path
 
 ## Repository Structure
 
@@ -174,15 +287,6 @@ Key entry points:
 - `nova_arc/runtime.py` - runtime assembly and mission execution
 - `nova_arc/packs/cold_chain/manifest.yaml` - hero pack definition
 - `nova_arc/sample_data/cold_chain/evidence/` - seeded evidence artifacts
-
-## Runtime Modes
-
-- `demo`
-  - deterministic planner path with local retrieval and local browser workflow bridge
-- `live_bedrock`
-  - Bedrock Converse planning with the same backend and UI workflow path
-- `live_bridge`
-  - live-labeled bridge mode for Bedrock plus Sonic and Nova Act contracts
 
 ## Tools Implemented
 
