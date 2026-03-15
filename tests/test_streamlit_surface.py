@@ -1,3 +1,6 @@
+from pathlib import Path
+
+from nova_arc.config import DEFAULT_DB_PATH, AppConfig
 from nova_arc.adapters.surfaces.streamlit_surface import StreamlitSurfaceAdapter
 from nova_arc.testing.factories import build_plan, build_profile, build_results, build_state, build_verification
 from nova_arc.ui_helpers import classify_error, risk_status
@@ -16,3 +19,12 @@ def test_surface_publish_has_tables_and_exports():
 def test_ui_helpers_format_risk_and_error():
     assert risk_status(88) == "Critical"
     assert classify_error("AccessDeniedException: no model access")["title"] == "IAM Or Model Access Failure"
+
+
+def test_blank_backend_db_path_env_falls_back_to_default(monkeypatch):
+    monkeypatch.setenv("BACKEND_DB_PATH", "")
+    monkeypatch.delenv("BACKEND_URL", raising=False)
+
+    config = AppConfig.from_env()
+
+    assert Path(config.backend_db_path) == DEFAULT_DB_PATH

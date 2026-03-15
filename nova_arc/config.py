@@ -19,6 +19,13 @@ def _as_bool(value: str | None, default: bool = False) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _env_or_default(name: str, default: str) -> str:
+    value = os.getenv(name)
+    if value is None or not value.strip():
+        return default
+    return value
+
+
 def load_environment() -> None:
     load_dotenv(REPO_ROOT / ".env", override=False)
 
@@ -54,16 +61,16 @@ class AppConfig:
     def from_env(cls) -> "AppConfig":
         load_environment()
         return cls(
-            runtime_mode=os.getenv("NOVA_RUNTIME_MODE", "demo"),
-            aws_region=os.getenv("AWS_REGION", "us-east-1"),
-            nova_model_id=os.getenv("NOVA_MODEL_ID", "us.amazon.nova-2-lite-v1:0"),
-            nova_sonic_model_id=os.getenv("NOVA_SONIC_MODEL_ID", "amazon.nova-sonic-v1:0"),
-            nova_embeddings_model_id=os.getenv("NOVA_EMBEDDINGS_MODEL_ID", "amazon.nova-2-multimodal-embeddings-v1:0"),
+            runtime_mode=_env_or_default("NOVA_RUNTIME_MODE", "demo"),
+            aws_region=_env_or_default("AWS_REGION", "us-east-1"),
+            nova_model_id=_env_or_default("NOVA_MODEL_ID", "us.amazon.nova-2-lite-v1:0"),
+            nova_sonic_model_id=_env_or_default("NOVA_SONIC_MODEL_ID", "amazon.nova-sonic-v1:0"),
+            nova_embeddings_model_id=_env_or_default("NOVA_EMBEDDINGS_MODEL_ID", "amazon.nova-2-multimodal-embeddings-v1:0"),
             bedrock_timeout_seconds=int(os.getenv("NOVA_BEDROCK_TIMEOUT_SECONDS", "3600")),
-            backend_url=os.getenv("BACKEND_URL", "http://127.0.0.1:8000"),
-            backend_db_path=os.getenv("BACKEND_DB_PATH", str(DEFAULT_DB_PATH)),
-            admin_portal_base_url=os.getenv("ADMIN_PORTAL_BASE_URL", "http://127.0.0.1:8000/admin"),
-            notification_provider=os.getenv("NOTIFICATION_PROVIDER", "slack"),
+            backend_url=_env_or_default("BACKEND_URL", "http://127.0.0.1:8000"),
+            backend_db_path=_env_or_default("BACKEND_DB_PATH", str(DEFAULT_DB_PATH)),
+            admin_portal_base_url=_env_or_default("ADMIN_PORTAL_BASE_URL", "http://127.0.0.1:8000/admin"),
+            notification_provider=_env_or_default("NOTIFICATION_PROVIDER", "slack"),
             resend_api_key=os.getenv("RESEND_API_KEY", ""),
             resend_from_email=os.getenv("RESEND_FROM_EMAIL", os.getenv("EMAIL_FROM", "")),
             resend_to_email=os.getenv("RESEND_TO_EMAIL", os.getenv("EMAIL_TO", "")),
