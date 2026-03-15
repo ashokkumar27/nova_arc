@@ -39,6 +39,11 @@ class PerceivedState:
     risk_score: int
     recommended_outcome: str
     evidence: List[Dict[str, Any]] = field(default_factory=list)
+    incident_id: Optional[str] = None
+    source_transcript: str = ""
+    voice_events: List[Dict[str, Any]] = field(default_factory=list)
+    backend_snapshot: Dict[str, Any] = field(default_factory=dict)
+    retrieval_trace: Dict[str, Any] = field(default_factory=dict)
     timestamp: str = field(default_factory=utc_now)
 
 
@@ -58,6 +63,8 @@ class ActionPlan:
     requires_approval: bool
     approval_reason: Optional[str]
     fallback: Optional[str]
+    raw_output: Any = None
+    sanitization_notes: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -67,6 +74,8 @@ class ToolExecutionResult:
     success: bool
     output: str
     category: str
+    details: Dict[str, Any] = field(default_factory=dict)
+    bridge_label: Optional[str] = None
     timestamp: str = field(default_factory=utc_now)
 
 
@@ -78,3 +87,4 @@ class VerificationResult:
     missed_conditions: List[str]
     residual_risk: int
     next_step: Optional[str] = None
+    details: Dict[str, Any] = field(default_factory=dict)

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#101820"/>
+  <text x="72" y="100" fill="#f7f8fb" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="700">Substation East Dashboard</text>
+  <text x="72" y="150" fill="#9ab8d2" font-family="Segoe UI, Arial, sans-serif" font-size="18">Transformer T-17 | Feeder F-12 | Overheating event</text>
+  <text x="72" y="250" fill="#ffb36a" font-family="Segoe UI, Arial, sans-serif" font-size="52" font-weight="700">149C</text>
+  <text x="72" y="292" fill="#c9d8e5" font-family="Segoe UI, Arial, sans-serif" font-size="18">Oil temperature | Arcing risk elevated</text>
+</svg>

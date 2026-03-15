@@ -1,0 +1,4 @@
+timestamp,event_type,source,message
+2026-03-15T09:02:10Z,telemetry,transformer-t17,Oil temperature reached 149C
+2026-03-15T09:03:44Z,telemetry,acoustic-sensor,Pattern suggests internal arcing risk
+2026-03-15T09:05:11Z,ops,feeder-f12,Feeder stress above continuity threshold

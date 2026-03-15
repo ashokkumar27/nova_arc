@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from nova_arc.config import AppConfig
+
 from .bedrock_bridge import BedrockConverseBridge
 from .embedding_bridge import MultimodalEmbeddingBridge
 from .nova_act_bridge import NovaActBridge
@@ -24,10 +26,17 @@ class BridgeRouter:
         }
 
 
-def build_bridge_router(mode: str = "demo", enable_bedrock: bool = False) -> BridgeRouter:
+def build_bridge_router(mode: str = "demo", config: AppConfig | None = None, backend_client=None) -> BridgeRouter:
+    config = config or AppConfig.from_env()
+    planner_live = mode in {"live_bedrock", "live_bridge"}
+    voice_live = mode == "live_bridge"
     return BridgeRouter(
-        planner=BedrockConverseBridge(enabled=enable_bedrock and mode != "demo"),
-        retrieval=MultimodalEmbeddingBridge(),
-        voice=NovaSonicBridge(),
-        browser=NovaActBridge(),
+        planner=BedrockConverseBridge(config=config, enabled=planner_live),
+        retrieval=MultimodalEmbeddingBridge(
+            backend_client=backend_client,
+            config=config,
+            enabled=planner_live and config.enable_live_embeddings,
+        ),
+        voice=NovaSonicBridge(config=config, enabled=voice_live),
+        browser=NovaActBridge(backend_client=backend_client, config=config),
     )

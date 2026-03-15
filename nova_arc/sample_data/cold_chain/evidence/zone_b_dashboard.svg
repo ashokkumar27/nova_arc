@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#091627"/>
+  <rect x="48" y="48" width="1184" height="624" rx="28" fill="#10233a" stroke="#1f4f7a" stroke-width="3"/>
+  <text x="88" y="110" fill="#eaf4ff" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="700">ColdChain Warehouse Dashboard</text>
+  <text x="88" y="154" fill="#8cb9de" font-family="Segoe UI, Arial, sans-serif" font-size="18">Zone B excursion live | Batch VX-204 | Shipment SHP-884 loading</text>
+  <rect x="88" y="210" width="280" height="160" rx="22" fill="#163756"/>
+  <text x="116" y="256" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">Zone B Temp</text>
+  <text x="116" y="320" fill="#ffb36a" font-family="Segoe UI, Arial, sans-serif" font-size="54" font-weight="700">11.8C</text>
+  <text x="116" y="354" fill="#c7dbef" font-family="Segoe UI, Arial, sans-serif" font-size="18">Threshold 8.0C | 14 minutes above limit</text>
+  <rect x="406" y="210" width="330" height="160" rx="22" fill="#163756"/>
+  <text x="434" y="256" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">Batch VX-204</text>
+  <text x="434" y="320" fill="#ff8b8b" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="700">Spoilage Risk</text>
+  <text x="434" y="354" fill="#c7dbef" font-family="Segoe UI, Arial, sans-serif" font-size="18">Compressor vibration abnormal | QA review required</text>
+  <rect x="774" y="210" width="370" height="160" rx="22" fill="#163756"/>
+  <text x="802" y="256" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">Shipment SHP-884</text>
+  <text x="802" y="320" fill="#ffd36a" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="700">Loading at Dock 3</text>
+  <text x="802" y="354" fill="#c7dbef" font-family="Segoe UI, Arial, sans-serif" font-size="18">Dispatch route Hub-2 | hold advised until stabilization</text>
+  <rect x="88" y="420" width="1056" height="180" rx="22" fill="#0d1f32" stroke="#1f4f7a" stroke-width="2"/>
+  <text x="116" y="470" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">Signals</text>
+  <text x="116" y="518" fill="#c7dbef" font-family="Segoe UI, Arial, sans-serif" font-size="20">Backup cooling available but not yet started</text>
+  <text x="116" y="556" fill="#c7dbef" font-family="Segoe UI, Arial, sans-serif" font-size="20">Incident camera shows outbound pallet staging beside Zone B</text>
+  <text x="116" y="594" fill="#c7dbef" font-family="Segoe UI, Arial, sans-serif" font-size="20">Recommended action: quarantine batch, hold shipment, notify on-call</text>
+</svg>

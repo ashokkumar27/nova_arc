@@ -1,0 +1,5 @@
+timestamp,event_type,source,message
+2026-03-15T08:12:11Z,telemetry,zone-b-sensor,Temperature climbed from 7.9C to 10.8C in Zone B
+2026-03-15T08:14:03Z,ops,compressor-17,Compressor vibration above baseline for 4 minutes
+2026-03-15T08:16:55Z,warehouse,dock-3,Shipment SHP-884 moved into active loading lane
+2026-03-15T08:18:18Z,quality,batch-vx-204,Batch VX-204 marked at-risk pending containment decision

@@ -1,0 +1,5 @@
+Transformer overheating protocol:
+1. Shed feeder load immediately to reduce stress.
+2. Isolate the transformer if arcing indicators persist.
+3. Dispatch a field engineer with P1 urgency.
+4. Keep the operations war room informed until the asset is secure.
