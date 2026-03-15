@@ -1,4 +1,6 @@
 from dataclasses import replace
+from io import BytesIO
+from urllib.error import HTTPError
 
 from nova_arc.tools import common_tools
 from nova_arc.tools.common_tools import notify_team_tool
@@ -62,3 +64,22 @@ def test_notify_team_tool_uses_resend_when_configured(backend_client, config, mo
     assert sent["url"] == "https://api.resend.com/emails"
     assert sent["payload"]["to"] == ["ops@example.com", "qa@example.com"]
     assert sent["headers"]["Authorization"] == "Bearer re_test_123"
+
+
+def test_post_json_surfaces_http_error_body(monkeypatch):
+    def fake_urlopen(_request):
+        raise HTTPError(
+            url="https://api.resend.com/emails",
+            code=403,
+            msg="Forbidden",
+            hdrs=None,
+            fp=BytesIO(b'{"message":"Verify a sending domain first"}'),
+        )
+
+    monkeypatch.setattr(common_tools.urllib_request, "urlopen", fake_urlopen)
+
+    try:
+        common_tools._post_json("https://api.resend.com/emails", {"subject": "x"})
+        assert False, "Expected RuntimeError"
+    except RuntimeError as exc:
+        assert "Verify a sending domain first" in str(exc)

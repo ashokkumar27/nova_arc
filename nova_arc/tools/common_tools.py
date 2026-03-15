@@ -4,6 +4,7 @@ from email.message import EmailMessage
 import json
 import smtplib
 from hashlib import sha1
+from urllib import error as urllib_error
 from urllib import request as urllib_request
 
 from nova_arc.core.mission_profile import ToolExecutionResult
@@ -15,11 +16,18 @@ def _post_json(url: str, payload: dict, headers: dict | None = None) -> dict:
     req = urllib_request.Request(
         url=url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json", **(headers or {})},
+        headers={"Content-Type": "application/json", "User-Agent": "nova-arc/1.0", **(headers or {})},
         method="POST",
     )
-    with urllib_request.urlopen(req) as response:
-        body = response.read().decode("utf-8").strip()
+    try:
+        with urllib_request.urlopen(req) as response:
+            body = response.read().decode("utf-8").strip()
+    except urllib_error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace").strip()
+        detail = f"HTTP {exc.code} {exc.reason}"
+        if body:
+            detail = f"{detail}: {body}"
+        raise RuntimeError(detail) from exc
     return json.loads(body) if body else {}
 
 
