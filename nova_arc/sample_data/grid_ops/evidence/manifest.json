@@ -1,0 +1,29 @@
+[
+  {
+    "source_id": "gridops-brief",
+    "source_type": "document",
+    "title": "Grid Emergency Runbook",
+    "path": "grid_runbook.txt",
+    "source_label": "Runbook",
+    "description": "Runbook for transformer overheating and cascading outage prevention.",
+    "keywords": ["transformer", "shed load", "isolate", "dispatch"]
+  },
+  {
+    "source_id": "gridops-dashboard",
+    "source_type": "image",
+    "title": "Substation East Dashboard Snapshot",
+    "path": "substation_dashboard.svg",
+    "source_label": "Dashboard Screenshot",
+    "description": "Telemetry snapshot for transformer T-17 and feeder F-12.",
+    "keywords": ["t-17", "f-12", "substation east", "overheating"]
+  },
+  {
+    "source_id": "gridops-log",
+    "source_type": "log",
+    "title": "Grid Telemetry Log",
+    "path": "grid_log.csv",
+    "source_label": "Telemetry Log",
+    "description": "Recent telemetry and alarm log for the substation event.",
+    "keywords": ["oil temperature", "arcing", "feeder stress"]
+  }
+]

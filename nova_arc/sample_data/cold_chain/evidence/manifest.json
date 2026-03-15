@@ -1,0 +1,38 @@
+[
+  {
+    "source_id": "coldchain-sop-pdf",
+    "source_type": "document",
+    "title": "Cold Chain Temperature Excursion SOP",
+    "path": "cold_chain_sop.pdf",
+    "source_label": "SOP PDF",
+    "description": "Official containment SOP for warehouse temperature excursions.",
+    "keywords": ["backup cooling", "quarantine", "hold shipment", "zone b", "temperature excursion"]
+  },
+  {
+    "source_id": "coldchain-dashboard-image",
+    "source_type": "image",
+    "title": "Zone B Command Dashboard Snapshot",
+    "path": "zone_b_dashboard.svg",
+    "source_label": "Dashboard Screenshot",
+    "description": "Warehouse dashboard showing Zone B over-temperature and loading activity.",
+    "keywords": ["zone b", "11.8c", "shipment", "loading", "compressor vibration"]
+  },
+  {
+    "source_id": "coldchain-incident-log",
+    "source_type": "log",
+    "title": "Incident Log Extract",
+    "path": "incident_log.csv",
+    "source_label": "Incident Log",
+    "description": "Operational event log from the cold-chain warehouse.",
+    "keywords": ["compressor", "temperature", "zone b", "loading", "vx-204", "shp-884"]
+  },
+  {
+    "source_id": "coldchain-prior-note",
+    "source_type": "note",
+    "title": "Prior Similar Incident Note",
+    "path": "prior_incident.md",
+    "source_label": "Prior Incident",
+    "description": "A previous cold-chain incident replay with the same decision pattern.",
+    "keywords": ["prior incident", "backup cooling", "batch quarantine", "shipment hold"]
+  }
+]

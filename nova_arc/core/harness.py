@@ -23,7 +23,7 @@ class MissionHarness:
         self.replay = ReplayStore()
         self.policy = PolicyEngine(auto_approve=auto_approve)
         self.executor = ExecutionEngine()
-        self.verifier = Verifier()
+        self.verifier = Verifier(getattr(perception_adapter, "backend_client", None))
 
     def _sanitize_plan(self, plan):
         allowed = set(self.profile.allowed_tools)
@@ -31,6 +31,8 @@ class MissionHarness:
         removed = [step.tool for step in plan.steps if step.tool not in allowed]
 
         if removed:
+            note = f"Removed forbidden tools: {', '.join(removed)}"
+            plan.sanitization_notes.append(note)
             self.replay.log("plan_sanitized", {
                 "removed_forbidden_tools": removed,
                 "allowed_tools": sorted(allowed),
@@ -51,6 +53,12 @@ class MissionHarness:
             "summary": state.situation_summary,
             "risk_score": state.risk_score,
             "hazards": state.hazards,
+            "incident_id": state.incident_id,
+        })
+        self.replay.log("evidence_grounded", {
+            "incident_id": state.incident_id,
+            "evidence_ids": [item.get("id") for item in state.evidence],
+            "trace": state.retrieval_trace,
         })
 
         policy_context = self.policy.evaluate_state(self.profile, state)
@@ -65,6 +73,7 @@ class MissionHarness:
             "intent": plan.intent,
             "strategy": plan.strategy,
             "steps": [s.tool for s in plan.steps],
+            "sanitization_notes": plan.sanitization_notes,
         })
 
         if not plan.steps:
@@ -89,6 +98,7 @@ class MissionHarness:
             "residual_risk": verification.residual_risk,
             "achieved_conditions": verification.achieved_conditions,
             "missed_conditions": verification.missed_conditions,
+            "details": verification.details,
         })
 
         return self.surface.publish(

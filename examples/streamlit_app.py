@@ -1,236 +1,470 @@
-import json
+from __future__ import annotations
+
 import os
 import sys
 
 import streamlit as st
-from dotenv import load_dotenv
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from nova_arc.adapters.perception.runtime_perception import RuntimePerceptionAdapter
-from nova_arc.adapters.planning.runtime_planner import RuntimePlannerAdapter
-from nova_arc.adapters.surfaces.streamlit_surface import StreamlitSurfaceAdapter
-from nova_arc.bridges.router import build_bridge_router
-from nova_arc.core.harness import MissionHarness
-from nova_arc.core.pack_loader import PackLoader
-from nova_arc.testing.factories import build_registry
+from nova_arc.config import AppConfig, load_environment
+from nova_arc.runtime import run_mission
+from nova_arc.ui_helpers import classify_error, default_context, default_transcript, risk_delta, risk_status
 
-load_dotenv()
 
-st.set_page_config(page_title="Nova A.R.C. Command Center", page_icon="⚡", layout="wide")
+load_environment()
+CONFIG = AppConfig.from_env()
+
+st.set_page_config(page_title="Nova A.R.C. ColdChain Live", page_icon="N", layout="wide")
 
 CUSTOM_CSS = """
 <style>
-[data-testid="stAppViewContainer"] {background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);} 
-.main .block-container {padding-top: 1.1rem; padding-bottom: 1rem; max-width: 1320px;}
-.hero {background: linear-gradient(135deg,#0f172a 0%,#111827 50%,#1d4ed8 100%); color:white; border-radius:24px; padding:24px; box-shadow:0 18px 50px rgba(15,23,42,0.25);}
-.glass {background: rgba(255,255,255,0.88); backdrop-filter: blur(10px); border:1px solid rgba(255,255,255,0.6); border-radius:20px; padding:18px; box-shadow:0 10px 32px rgba(15,23,42,0.08);} 
-.metric-shell {background: linear-gradient(180deg,#111827 0%,#0f172a 100%); color:white; border-radius:20px; padding:18px; box-shadow:0 12px 30px rgba(15,23,42,0.18);} 
-.section-title {font-size: 1.05rem; font-weight: 700; margin-bottom: 0.55rem;}
-.small-muted {color: #6b7280; font-size: 0.92rem;}
-.kpi {font-size: 2rem; font-weight: 800; margin: 0.1rem 0;}
-.badge {display:inline-block; padding:6px 10px; border-radius:999px; background:#dbeafe; color:#1d4ed8; font-weight:700; font-size:.8rem;}
+:root {
+  --ink: #f6f8fc;
+  --muted: #a9bfd7;
+  --bg0: #04111f;
+  --bg1: #0c2340;
+  --bg2: #173d5e;
+  --glass: rgba(9, 25, 43, 0.78);
+  --line: rgba(169, 191, 215, 0.18);
+  --accent: #8ef0cf;
+  --warn: #ffb266;
+  --danger: #ff7d7d;
+}
+[data-testid="stAppViewContainer"] {
+  background:
+    radial-gradient(circle at top right, rgba(40, 101, 164, 0.35), transparent 30%),
+    radial-gradient(circle at bottom left, rgba(142, 240, 207, 0.18), transparent 28%),
+    linear-gradient(180deg, var(--bg0) 0%, #081827 36%, #0a1d31 100%);
+  color: var(--ink);
+}
+.main .block-container {
+  padding-top: 1.1rem;
+  padding-bottom: 1rem;
+  max-width: 1440px;
+}
+[data-testid="stSidebar"] {
+  background: linear-gradient(180deg, rgba(8, 23, 39, 0.98), rgba(10, 32, 54, 0.98));
+  border-right: 1px solid rgba(169, 191, 215, 0.12);
+}
+.hero {
+  background:
+    linear-gradient(120deg, rgba(7, 18, 31, 0.96), rgba(20, 61, 94, 0.92)),
+    radial-gradient(circle at top right, rgba(142, 240, 207, 0.2), transparent 20%);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  padding: 28px;
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.24);
+}
+.badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(142, 240, 207, 0.35);
+  color: var(--accent);
+  background: rgba(142, 240, 207, 0.08);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.glass {
+  background: var(--glass);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  padding: 18px;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.18);
+}
+.metric {
+  background: linear-gradient(180deg, rgba(10, 24, 40, 0.92), rgba(7, 19, 31, 0.92));
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 18px;
+}
+.metric .label { color: var(--muted); font-size: 0.92rem; }
+.metric .value { color: var(--ink); font-size: 2.05rem; font-weight: 800; margin-top: 8px; }
+.card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.card h4 { margin: 0 0 10px 0; color: var(--ink); }
+.meta { color: var(--muted); font-size: 0.9rem; }
+.status-pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-right: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: rgba(142, 240, 207, 0.1);
+  color: var(--accent);
+}
+.danger-pill { background: rgba(255, 125, 125, 0.12); color: var(--danger); }
+.warning-pill { background: rgba(255, 178, 102, 0.12); color: var(--warn); }
+.section-title {
+  font-size: 1.04rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+.divider {
+  height: 1px;
+  background: var(--line);
+  margin: 16px 0;
+}
 </style>
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 
-def risk_status(score: int):
-    if score >= 85:
-        return "Critical"
-    if score >= 70:
-        return "High"
-    if score >= 40:
-        return "Moderate"
-    return "Low"
+PACKS = {
+    "Nova A.R.C. ColdChain Live": {"pack_id": "cold_chain", "scenario": "cold_chain"},
+    "Grid Ops Proof": {"pack_id": "grid_ops", "scenario": "grid_ops"},
+}
 
 
-def risk_delta(score: int, residual: int):
-    return score - residual
+def render_bridge_health(bridge_health: dict):
+    cards = []
+    for name, item in bridge_health.items():
+        pill_class = "status-pill" if item.get("ok") else "status-pill danger-pill"
+        cards.append(
+            f"""
+            <div class="card">
+              <div class="{pill_class}">{name.replace('_', ' ').title()}</div>
+              <div class="meta">{item.get('detail', 'ready')}</div>
+              <div style="margin-top:8px;color:var(--ink);font-weight:700;">{item.get('model_id', item.get('portal_url', ''))}</div>
+            </div>
+            """
+        )
+    st.markdown("".join(cards), unsafe_allow_html=True)
 
 
-def run_pack(pack_id: str, scenario: str, context: str, mode: str):
-    loader = PackLoader("nova_arc/packs")
-    profile = loader.load(pack_id)
-    bridges = build_bridge_router(mode=mode, enable_bedrock=(mode != "demo"))
-    harness = MissionHarness(
-        profile=profile,
-        perception_adapter=RuntimePerceptionAdapter(bridges.retrieval),
-        planner_adapter=RuntimePlannerAdapter(bridges.planner),
-        tool_registry=build_registry(bridges.browser),
-        surface_adapter=StreamlitSurfaceAdapter(),
-        auto_approve=True,
+def render_evidence_cards(evidence: list[dict]):
+    for item in evidence:
+        st.markdown(
+            f"""
+            <div class="card">
+              <div class="status-pill">{item.get('source_label', item.get('modality', 'Evidence'))}</div>
+              <h4>{item.get('title', 'Evidence')}</h4>
+              <div class="meta">Score: {item.get('score', 'n/a')} | Path: {item.get('path', '')}</div>
+              <p style="margin-top:10px;">{item.get('snippet', '')}</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
+def render_plan_steps(steps: list[dict]):
+    for index, step in enumerate(steps, start=1):
+        st.markdown(
+            f"""
+            <div class="card">
+              <div class="status-pill">Step {index}</div>
+              <h4>{step['tool']}</h4>
+              <div class="meta">Expected effect: {step['expected_effect']}</div>
+              <p style="margin-top:10px;"><strong>Rationale:</strong> {step['rationale']}</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.json(step["args"])
+
+
+def render_results(results: list[dict]):
+    for result in results:
+        pill_class = "status-pill" if result["success"] else "status-pill danger-pill"
+        bridge_label = result.get("bridge_label") or result["category"]
+        st.markdown(
+            f"""
+            <div class="card">
+              <div class="{pill_class}">{'Completed' if result['success'] else 'Failed'}</div>
+              <div class="status-pill warning-pill">{bridge_label}</div>
+              <h4>{result['tool']}</h4>
+              <div class="meta">{result['output']}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if result.get("details"):
+            st.json(result["details"])
+
+
+def render_error_panel(error_payload: dict):
+    st.markdown(
+        f"""
+        <div class="glass" style="border-color: rgba(255, 125, 125, 0.35);">
+          <div class="status-pill danger-pill">{error_payload['title']}</div>
+          <h3 style="color: var(--ink); margin-top: 10px;">Mission execution did not complete</h3>
+          <p>{error_payload['detail']}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
-    output = harness.run({"scenario": scenario, "context": context, "input_type": "voice" if mode == "live_bridge" else "text"})
-    output["debug"] = {
-        "planner_usage": getattr(harness.planner, "last_usage", {}) or {},
-        "planner_raw_output": getattr(harness.planner, "last_raw_output", None),
-        "planner_error": getattr(harness.planner, "last_error", None),
-    }
-    output["bridge_health"] = bridges.health()
-    output["runtime_mode"] = mode
-    return output
 
 
 with st.sidebar:
-    st.header("Mission Controls")
+    st.markdown("## Mission Controls")
+    pack_name = st.selectbox("Pack", list(PACKS.keys()), index=0)
     mode = st.selectbox("Runtime Mode", ["demo", "live_bedrock", "live_bridge"], index=0)
-    pack_choice = st.selectbox("Choose Command Center Pack", ["Pharma Cold Chain", "Grid Operations"])
-    default_context = "Pharma DC / Vaccine Vault / KL North" if pack_choice == "Pharma Cold Chain" else "National Grid / Substation East"
-    context = st.text_input("Mission Context", value=default_context)
-    show_debug = st.toggle("Show debug panels", value=False)
+    pack = PACKS[pack_name]
+    context = st.text_input("Mission Context", value=default_context(pack["pack_id"]))
+    transcript = st.text_area("Voice / Transcript Intake", value=default_transcript(pack["pack_id"]), height=140)
+    show_debug = st.toggle("Show debug drawer", value=True)
     run = st.button("Run Mission", use_container_width=True, type="primary")
-    st.divider()
-    st.caption("Live Bedrock requires boto3 plus working Bedrock permissions/model access.")
+    st.caption(f"Backend: {CONFIG.backend_url}")
+    st.caption(f"Planner model: {CONFIG.nova_model_id}")
 
-if "output" not in st.session_state:
-    st.session_state.output = None
+if "mission_output" not in st.session_state:
+    st.session_state.mission_output = None
+    st.session_state.mission_error = None
 
 if run:
-    st.session_state.output = run_pack(
-        pack_id="cold_chain" if pack_choice == "Pharma Cold Chain" else "grid_ops",
-        scenario="cold_chain" if pack_choice == "Pharma Cold Chain" else "grid_ops",
-        context=context,
-        mode=mode,
+    try:
+        st.session_state.mission_output = run_mission(
+            pack_id=pack["pack_id"],
+            scenario=pack["scenario"],
+            transcript=transcript,
+            context=context,
+            mode=mode,
+            config=CONFIG,
+            use_http_backend=True,
+            reset_backend=True,
+        )
+        st.session_state.mission_error = None
+    except Exception as exc:
+        st.session_state.mission_output = None
+        st.session_state.mission_error = classify_error(str(exc))
+
+output = st.session_state.mission_output
+error = st.session_state.mission_error
+
+if output is None and error is None:
+    st.markdown(
+        """
+        <div class="hero">
+          <div class="badge">Amazon Nova Command Center</div>
+          <h1 style="margin: 12px 0 12px 0; color: var(--ink);">Nova A.R.C. ColdChain Live</h1>
+          <p style="max-width: 860px; color: var(--muted); font-size: 1.03rem;">
+            A filmable incident command surface where a spoken warehouse issue is grounded with multimodal evidence,
+            planned with Amazon Nova, executed through real tools, verified against backend state, and replayed as a premium mission timeline.
+          </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
-
-output = st.session_state.output
-
-if output is None:
-    st.markdown("<div class='hero'><div class='badge'>Agentic Harness Engineering</div><h1 style='margin:0.35rem 0 0.5rem 0;'>Nova A.R.C. Command Center</h1><p style='font-size:1.03rem;max-width:860px;'>A close-to-real command-center runtime that loads a mission pack, normalizes an incident, plans safe interventions, executes approved tools, verifies outcomes, and renders a replay trail in one surface.</p></div>", unsafe_allow_html=True)
-    a,b,c = st.columns(3)
+    a, b, c = st.columns(3)
     with a:
-        st.markdown("<div class='glass'><div class='section-title'>Pack-driven</div><p>Cold chain and grid operations use the same harness core with different directives, tools, and success conditions.</p></div>", unsafe_allow_html=True)
+        st.markdown(
+            """
+            <div class="glass">
+              <div class="section-title">Voice + Evidence</div>
+              <p>Voice ingress is framed through Nova 2 Sonic and grounded with SOP, dashboard, log, and prior incident evidence.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     with b:
-        st.markdown("<div class='glass'><div class='section-title'>Live-ready</div><p>Bedrock planning path is wired through the bridge layer. Sonic and Nova Act remain seamless bridge targets.</p></div>", unsafe_allow_html=True)
+        st.markdown(
+            """
+            <div class="glass">
+              <div class="section-title">Agentic Tooling</div>
+              <p>Amazon Nova planning is constrained by pack-scoped tools, including a real local Nova Act-style admin workflow.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     with c:
-        st.markdown("<div class='glass'><div class='section-title'>Replayable</div><p>Every mission step is logged into a timeline for verification, debugging, and auditability.</p></div>", unsafe_allow_html=True)
-else:
+        st.markdown(
+            """
+            <div class="glass">
+              <div class="section-title">Replayable By Design</div>
+              <p>Every stage is logged, verified, exportable, and ready to show in a 3-minute hackathon demo.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+if error is not None:
+    render_error_panel(error)
+
+if output is not None:
     profile = output["profile"]
     state = output["state"]
-    plan = output["plan"]
     verification = output["verification"]
-    health = output.get("bridge_health", {})
 
-    st.markdown(f"<div class='hero'><div class='badge'>{output.get('runtime_mode','demo').replace('_',' ').title()}</div><h1 style='margin:0.35rem 0 0.5rem 0;'>{profile['name']}</h1><p style='font-size:1.03rem;max-width:920px;'><strong>Prime Directive:</strong> {profile['prime_directive']}<br/><span style='opacity:0.9'>Context: {state['context']}</span></p></div>", unsafe_allow_html=True)
+    st.markdown(
+        f"""
+        <div class="hero">
+          <div class="badge">{output['runtime_mode'].replace('_', ' ').title()}</div>
+          <div class="badge">Voice Ingress: Nova 2 Sonic</div>
+          <h1 style="margin: 12px 0 8px 0; color: var(--ink);">{profile['name']}</h1>
+          <p style="color: var(--muted); max-width: 920px;">
+            <strong>Prime directive:</strong> {profile['prime_directive']}<br/>
+            <strong>Context:</strong> {state['context']}<br/>
+            <strong>Planner model:</strong> {output['runtime']['planner_model_id']}
+          </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     k1, k2, k3, k4 = st.columns(4)
-    with k1:
-        st.markdown(f"<div class='metric-shell'><div class='small-muted'>Initial Risk</div><div class='kpi'>{state['risk_score']}</div><div>{risk_status(state['risk_score'])}</div></div>", unsafe_allow_html=True)
-    with k2:
-        st.markdown(f"<div class='metric-shell'><div class='small-muted'>Residual Risk</div><div class='kpi'>{verification['residual_risk']}</div><div>{risk_status(verification['residual_risk'])}</div></div>", unsafe_allow_html=True)
-    with k3:
-        st.markdown(f"<div class='metric-shell'><div class='small-muted'>Risk Reduced</div><div class='kpi'>{risk_delta(state['risk_score'], verification['residual_risk'])}</div><div>Containment effect</div></div>", unsafe_allow_html=True)
-    with k4:
-        st.markdown(f"<div class='metric-shell'><div class='small-muted'>Confidence</div><div class='kpi'>{int(state['confidence']*100)}%</div><div>{'Success' if verification['success'] else 'Escalation needed'}</div></div>", unsafe_allow_html=True)
+    for column, label, value, note in [
+        (k1, "Current Risk", state["risk_score"], risk_status(state["risk_score"])),
+        (k2, "Residual Risk", verification["residual_risk"], risk_status(verification["residual_risk"])),
+        (k3, "Risk Reduced", risk_delta(state["risk_score"], verification["residual_risk"]), "Containment effect"),
+        (k4, "Confidence", f"{int(state['confidence'] * 100)}%", "Grounded mission confidence"),
+    ]:
+        with column:
+            st.markdown(
+                f"""
+                <div class="metric">
+                  <div class="label">{label}</div>
+                  <div class="value">{value}</div>
+                  <div class="meta">{note}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-    s1, s2 = st.columns([1.6, 1])
-    with s1:
-        st.markdown("<div class='glass'>", unsafe_allow_html=True)
-        st.subheader("Operational Situation")
-        st.info(state["situation_summary"])
-        st.write("**Recommended Outcome**")
-        st.success(state["recommended_outcome"])
-        st.write("**Mission Objectives**")
-        for obj in profile["objectives"]:
-            st.write(f"- {obj}")
+    left, right = st.columns([1.7, 1])
+    with left:
+        st.markdown(
+            f"""
+            <div class="glass">
+              <div class="section-title">Mission Header</div>
+              <div class="status-pill">{profile['pack_id']}</div>
+              <div class="status-pill warning-pill">{output['runtime_mode']}</div>
+              <p style="margin-top:12px;"><strong>Summary:</strong> {state['situation_summary']}</p>
+              <p><strong>Transcript:</strong> {state['source_transcript']}</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with right:
+        st.markdown("<div class='glass'><div class='section-title'>Bridge Health</div>", unsafe_allow_html=True)
+        render_bridge_health(output["bridge_health"])
         st.markdown("</div>", unsafe_allow_html=True)
-    with s2:
-        st.markdown("<div class='glass'>", unsafe_allow_html=True)
-        st.subheader("Bridge Health")
-        for name, item in health.items():
-            status = "🟢" if item.get("ok") else "🔴"
-            st.write(f"{status} **{name.title()}** — {item.get('detail','ready')}")
-            extra = {k:v for k,v in item.items() if k not in {'ok','backend','detail'}}
-            if extra:
-                st.caption(str(extra))
-        st.markdown("</div>", unsafe_allow_html=True)
 
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Situation", "Plan", "Execution", "Verification", "Replay", "Debug"])
+    tabs = st.tabs(
+        [
+            "Situation Overview",
+            "Evidence Grounding",
+            "Planned Intervention",
+            "Action Execution",
+            "Verification",
+            "Replay Timeline",
+            "Exports",
+        ]
+    )
 
-    with tab1:
-        a, b = st.columns([1.25, 1])
+    with tabs[0]:
+        a, b = st.columns([1.1, 1])
         with a:
-            st.markdown("### Hazards & Signals")
-            for h in state["hazards"]:
-                st.write(f"- {h}")
-            st.write("")
+            st.markdown("<div class='glass'><div class='section-title'>Incident Summary</div>", unsafe_allow_html=True)
+            st.write(state["situation_summary"])
+            st.write("**Hazards**")
+            for hazard in state["hazards"]:
+                st.write(f"- {hazard}")
+            st.write("**Signals**")
             st.json(state["signals"])
+            st.markdown("</div>", unsafe_allow_html=True)
         with b:
-            st.markdown("### Entities")
+            st.markdown("<div class='glass'><div class='section-title'>Entities And Backend State</div>", unsafe_allow_html=True)
             st.dataframe(output["tables"]["entities_df"], use_container_width=True)
-            st.markdown("### Evidence Grounding")
-            st.dataframe(output["tables"]["evidence_df"], use_container_width=True)
+            snapshot = state.get("backend_snapshot", {})
+            if snapshot.get("batches"):
+                st.write("**Batches**")
+                st.dataframe(snapshot["batches"], use_container_width=True)
+            if snapshot.get("shipments"):
+                st.write("**Shipments**")
+                st.dataframe(snapshot["shipments"], use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
-    with tab2:
-        st.markdown("### Planned Intervention")
-        st.write(f"**Intent:** {plan['intent']}")
-        st.write(f"**Strategy:** {plan['strategy']}")
+    with tabs[1]:
+        st.markdown("<div class='glass'><div class='section-title'>Evidence Grounding</div>", unsafe_allow_html=True)
+        render_evidence_cards(state["evidence"])
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with tabs[2]:
+        plan = output["plan"]
         meta1, meta2, meta3 = st.columns(3)
-        meta1.metric("Steps", len(plan["steps"]))
-        meta2.metric("Approval", "Required" if plan["requires_approval"] else "Not required")
+        meta1.metric("Intent", plan["intent"])
+        meta2.metric("Approval", "Required" if plan["requires_approval"] else "Auto")
         meta3.metric("Fallback", "Ready" if plan["fallback"] else "None")
-        if plan["approval_reason"]:
-            st.warning(f"Approval Reason: {plan['approval_reason']}")
-        for i, step in enumerate(plan["steps"], 1):
-            with st.expander(f"Step {i}: {step['tool']}", expanded=True):
-                left, right = st.columns([1.5,1])
-                with left:
-                    st.write(f"**Rationale:** {step['rationale']}")
-                    st.write(f"**Expected Effect:** {step['expected_effect']}")
-                with right:
-                    st.json(step["args"])
-        if plan["fallback"]:
-            st.info(f"Fallback: {plan['fallback']}")
+        st.markdown("<div class='glass'><div class='section-title'>Planner Strategy</div>", unsafe_allow_html=True)
+        st.write(plan["strategy"])
+        if plan["sanitization_notes"]:
+            for note in plan["sanitization_notes"]:
+                st.warning(note)
+        render_plan_steps(plan["steps"])
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    with tab3:
-        st.markdown("### Execution Results")
-        st.dataframe(output["tables"]["results_df"], use_container_width=True)
+    with tabs[3]:
+        st.markdown("<div class='glass'><div class='section-title'>Action Execution</div>", unsafe_allow_html=True)
+        render_results(output["results"])
+        if not output["tables"]["actions_df"].empty:
+            st.write("**Backend Action Log**")
+            st.dataframe(output["tables"]["actions_df"], use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    with tab4:
-        v1, v2 = st.columns([1.3,1])
-        with v1:
-            if verification["success"]:
-                st.success(verification["summary"])
-            else:
-                st.error(verification["summary"])
-            st.metric("Residual Risk", verification["residual_risk"])
-            if verification["next_step"]:
-                st.warning(f"Next Step: {verification['next_step']}")
-        with v2:
+    with tabs[4]:
+        st.markdown("<div class='glass'><div class='section-title'>Verification</div>", unsafe_allow_html=True)
+        if verification["success"]:
+            st.success(verification["summary"])
+        else:
+            st.error(verification["summary"])
+        c1, c2 = st.columns(2)
+        with c1:
             st.write("**Achieved Conditions**")
             for item in verification["achieved_conditions"]:
                 st.write(f"- {item}")
+        with c2:
             st.write("**Missed Conditions**")
             if verification["missed_conditions"]:
                 for item in verification["missed_conditions"]:
                     st.write(f"- {item}")
             else:
-                st.write("- None")
+                st.write("- none")
+        if verification.get("next_step"):
+            st.warning(verification["next_step"])
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    with tab5:
-        st.markdown("### Replay Timeline")
+    with tabs[5]:
+        st.markdown("<div class='glass'><div class='section-title'>Replay Timeline</div>", unsafe_allow_html=True)
         st.dataframe(output["tables"]["timeline_df"], use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with tabs[6]:
+        st.markdown("<div class='glass'><div class='section-title'>Exports</div>", unsafe_allow_html=True)
         st.download_button(
-            label="Download incident report JSON",
-            data=json.dumps(output, default=str, indent=2),
-            file_name=f"{profile['pack_id']}_incident_report.json",
+            label="Download JSON Report",
+            data=output["exports"]["json_report"],
+            file_name=f"{profile['pack_id']}_command_report.json",
             mime="application/json",
             use_container_width=True,
         )
+        st.download_button(
+            label="Download Markdown Replay",
+            data=output["exports"]["markdown_report"],
+            file_name=f"{profile['pack_id']}_command_report.md",
+            mime="text/markdown",
+            use_container_width=True,
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    with tab6:
-        if show_debug:
-            st.markdown("### Planner Debug")
-            st.write("**Planner usage**")
-            st.json(output.get("debug", {}).get("planner_usage", {}))
-            st.write("**Planner raw output**")
-            raw = output.get("debug", {}).get("planner_raw_output")
-            if isinstance(raw, str):
-                st.code(raw, language="text")
-            else:
-                st.json(raw or {})
-            if output.get("debug", {}).get("planner_error"):
-                st.error(output["debug"]["planner_error"])
-        else:
-            st.info("Enable 'Show debug panels' in the sidebar to inspect raw live planner output.")
+    if show_debug:
+        with st.expander("Debug Drawer", expanded=False):
+            st.write("**Planner Raw Output**")
+            st.code(str(output["debug"]["planner_raw_output"]), language="text")
+            st.write("**Planner Request**")
+            st.json(output["debug"]["planner_request"])
+            st.write("**Voice Bridge Response**")
+            st.json(output["debug"]["voice_response"])
+            st.write("**Retrieval Trace**")
+            st.json(state["retrieval_trace"])
+            st.write("**Bridge Responses**")
+            st.json(output["bridge_health"])

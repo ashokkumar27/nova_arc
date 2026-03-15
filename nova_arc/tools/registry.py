@@ -1,5 +1,5 @@
 class RegisteredTool:
-    def __init__(self, name, category, description="", executor=None):
+    def __init__(self, name, category, description="", executor=None, input_schema=None, bridge_label=None):
         if executor is None:
             if callable(description):
                 executor = description
@@ -10,6 +10,8 @@ class RegisteredTool:
         self.category = category
         self.description = description
         self._executor = executor
+        self.input_schema = input_schema or {"type": "object", "properties": {}, "additionalProperties": True}
+        self.bridge_label = bridge_label
 
     def execute(self, args):
         return self._executor(args)
@@ -36,6 +38,8 @@ class ToolRegistry:
                 "name": tool.name,
                 "category": tool.category,
                 "description": tool.description,
+                "input_schema": tool.input_schema,
+                "bridge_label": tool.bridge_label,
             }
             for tool in self._tools.values()
         ]

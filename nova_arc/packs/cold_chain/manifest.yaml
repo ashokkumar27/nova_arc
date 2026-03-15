@@ -22,16 +22,17 @@ policy:
 
 tools:
   allowlist:
+    - retrieve_evidence
     - start_backup_cooling
     - quarantine_batch
-    - divert_shipment
+    - hold_shipment
     - notify_team
 
 verification:
   success_conditions:
     - chamber_stabilized
     - batch_quarantined
-    - shipment_diverted
+    - shipment_held_or_diverted
   residual_risk_target: 30
 
 reporting:

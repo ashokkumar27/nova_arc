@@ -29,6 +29,8 @@ class ExecutionEngine:
                 "tool": result.tool,
                 "success": result.success,
                 "output": result.output,
+                "details": result.details,
+                "bridge_label": result.bridge_label,
             })
             results.append(result)
             if not result.success:

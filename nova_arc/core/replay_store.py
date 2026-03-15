@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List
+import json
 
 from .mission_profile import utc_now
 
@@ -18,3 +19,6 @@ class ReplayStore:
 
     def all(self) -> List[Dict[str, Any]]:
         return self.events[:]
+
+    def to_json(self) -> str:
+        return json.dumps(self.events, indent=2, default=str)

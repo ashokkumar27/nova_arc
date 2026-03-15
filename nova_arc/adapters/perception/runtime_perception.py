@@ -7,73 +7,85 @@ from .base import PerceptionAdapter
 
 
 class RuntimePerceptionAdapter(PerceptionAdapter):
-    def __init__(self, retrieval_bridge):
+    def __init__(self, retrieval_bridge, backend_client, voice_bridge):
         self.retrieval_bridge = retrieval_bridge
+        self.backend_client = backend_client
+        self.voice_bridge = voice_bridge
+        self.last_voice_response = {}
+        self.last_retrieval_response = {}
 
     def normalize(self, payload: dict, profile):
         scenario = payload["scenario"]
+        transcript = payload.get("transcript") or payload.get("context", "")
+
+        voice_response = self.voice_bridge.invoke(
+            BridgeRequest(
+                operation="ingest_transcript",
+                pack_id=profile.pack_id,
+                payload={"text": transcript},
+            )
+        )
+        self.last_voice_response = voice_response.result if voice_response.ok else {}
+
+        incident = self.backend_client.ingest_incident(
+            pack_id=profile.pack_id,
+            scenario=scenario,
+            context=payload.get("context", ""),
+            transcript=transcript,
+        )
+
         evidence_response = self.retrieval_bridge.invoke(
             BridgeRequest(
                 operation="search",
-                payload={"query": {"type": payload.get("input_type", "text"), "content": payload.get("context", "")}},
+                payload={"query": {"type": payload.get("input_type", "text"), "content": transcript, "top_k": 4}},
                 pack_id=profile.pack_id,
             )
         )
+        self.last_retrieval_response = evidence_response.result if evidence_response.ok else {}
         evidence = evidence_response.result.get("matches", []) if evidence_response.ok else []
+        snapshot = self.backend_client.get_dashboard(profile.pack_id, incident_id=incident["incident_id"])
 
         if scenario == "cold_chain":
             return PerceivedState(
                 mission=profile.pack_id,
-                context=payload["context"],
-                situation_summary=(
-                    "Cold-room Zone B temperature rose to 11.8C for 14 minutes. "
-                    "Compressor vibration abnormal. Vaccine batch VX-204 at spoilage risk. "
-                    "Outbound shipment SHP-884 is in active loading window."
-                ),
+                context=payload.get("context", ""),
+                situation_summary=incident["summary"],
                 entities=[
-                    {"type": "zone", "id": "Zone-B", "status": "critical"},
-                    {"type": "batch", "id": "VX-204", "status": "at-risk"},
-                    {"type": "shipment", "id": "SHP-884", "status": "loading"},
+                    {"type": "zone", "id": incident["signals"]["zone_id"], "status": "critical"},
+                    {"type": "batch", "id": incident["signals"]["batch_id"], "status": snapshot["batches"][0]["status"] if snapshot["batches"] else "at_risk"},
+                    {"type": "shipment", "id": incident["signals"]["shipment_id"], "status": snapshot["shipments"][0]["status"] if snapshot["shipments"] else "loading"},
                 ],
-                hazards=["temperature_excursion", "inventory_spoilage_risk", "regulatory_non_compliance"],
-                signals={
-                    "zone_id": "Zone-B",
-                    "batch_id": "VX-204",
-                    "shipment_id": "SHP-884",
-                    "destination": "Hub-2",
-                    "temperature_c": 11.8,
-                    "duration_minutes": 14,
-                },
-                confidence=0.96,
-                risk_score=82,
+                hazards=incident["hazards"],
+                signals=incident["signals"],
+                confidence=incident["confidence"],
+                risk_score=incident["risk_score"],
                 recommended_outcome="Protect inventory integrity and compliance",
                 evidence=evidence,
+                incident_id=incident["incident_id"],
+                source_transcript=self.last_voice_response.get("text", transcript),
+                voice_events=self.last_voice_response.get("events", []),
+                backend_snapshot=snapshot,
+                retrieval_trace=self.last_retrieval_response.get("trace", {}),
             )
 
-        if scenario == "grid_ops":
-            return PerceivedState(
-                mission=profile.pack_id,
-                context=payload["context"],
-                situation_summary=(
-                    "Transformer T-17 oil temperature reached 149C. Acoustic pattern suggests internal arcing risk. "
-                    "Feeder F-12 is under stress and failure may cascade to Substation East."
-                ),
-                entities=[
-                    {"type": "transformer", "id": "T-17", "status": "critical"},
-                    {"type": "feeder", "id": "F-12", "status": "loaded"},
-                    {"type": "site", "id": "Substation-East", "status": "watch"},
-                ],
-                hazards=["thermal_failure", "arc_fault_risk", "cascading_outage"],
-                signals={
-                    "transformer_id": "T-17",
-                    "feeder_id": "F-12",
-                    "site": "Substation-East",
-                    "load_shed_percent": "20",
-                },
-                confidence=0.94,
-                risk_score=91,
-                recommended_outcome="Prevent transformer failure and cascading outage",
-                evidence=evidence,
-            )
-
-        raise ValueError(f"Unknown scenario: {scenario}")
+        return PerceivedState(
+            mission=profile.pack_id,
+            context=payload.get("context", ""),
+            situation_summary=incident["summary"],
+            entities=[
+                {"type": "transformer", "id": incident["signals"]["transformer_id"], "status": "critical"},
+                {"type": "feeder", "id": incident["signals"]["feeder_id"], "status": "stressed"},
+                {"type": "site", "id": incident["signals"]["site"], "status": "watch"},
+            ],
+            hazards=incident["hazards"],
+            signals=incident["signals"],
+            confidence=incident["confidence"],
+            risk_score=incident["risk_score"],
+            recommended_outcome="Prevent transformer failure and cascading outage",
+            evidence=evidence,
+            incident_id=incident["incident_id"],
+            source_transcript=self.last_voice_response.get("text", transcript),
+            voice_events=self.last_voice_response.get("events", []),
+            backend_snapshot=snapshot,
+            retrieval_trace=self.last_retrieval_response.get("trace", {}),
+        )
