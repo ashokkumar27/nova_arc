@@ -46,6 +46,11 @@ class MissionHarness:
             "strategy": plan.strategy,
             "steps": [s.tool for s in plan.steps],
         })
+        self.replay.log("planner_debug", {
+            "raw_output": getattr(self.planner, "last_raw_output", None),
+            "usage": getattr(self.planner, "last_usage", {}),
+            "error": getattr(self.planner, "last_error", None),
+        })
         self.policy.validate_plan(self.profile, plan, self.tool_registry)
         approved = self.policy.approve(plan)
         self.replay.log("approval_result", {"approved": approved})
@@ -59,4 +64,10 @@ class MissionHarness:
             "achieved_conditions": verification.achieved_conditions,
             "missed_conditions": verification.missed_conditions,
         })
-        return self.surface.publish(self.profile, state, plan, results, verification, self.replay.all())
+        published = self.surface.publish(self.profile, state, plan, results, verification, self.replay.all())
+        published["debug"] = {
+            "planner_raw_output": getattr(self.planner, "last_raw_output", None),
+            "planner_usage": getattr(self.planner, "last_usage", {}),
+            "planner_error": getattr(self.planner, "last_error", None),
+        }
+        return published

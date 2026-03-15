@@ -31,7 +31,7 @@ class RuntimeBridge:
     backend_name = "base"
 
     def health(self) -> dict:
-        return {"ok": True, "backend": self.backend_name}
+        return {"ok": True, "backend": self.backend_name, "detail": "ready"}
 
     def invoke(self, request: BridgeRequest) -> BridgeResponse:
         raise NotImplementedError

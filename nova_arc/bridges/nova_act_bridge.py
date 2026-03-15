@@ -6,6 +6,9 @@ from .contracts import BridgeRequest, BridgeResponse, RuntimeBridge
 class NovaActBridge(RuntimeBridge):
     backend_name = "nova_act"
 
+    def health(self) -> dict:
+        return {"ok": True, "backend": self.backend_name, "detail": "bridge stub ready"}
+
     def invoke(self, request: BridgeRequest) -> BridgeResponse:
         workflow_id = request.payload.get("workflow_id", "workflow")
         params = request.payload.get("parameters", {})
@@ -18,6 +21,9 @@ class NovaActBridge(RuntimeBridge):
                 "run_id": f"act-{workflow_id}-001",
                 "status": "completed",
                 "summary": summary,
-                "artifacts": {"screenshots": [], "logs": []},
+                "artifacts": {
+                    "screenshots": [f"artifact://{workflow_id}/final.png"],
+                    "logs": [f"Action finished for {workflow_id}"],
+                },
             },
         )

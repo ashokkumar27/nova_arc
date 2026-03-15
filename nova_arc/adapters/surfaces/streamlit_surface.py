@@ -5,6 +5,25 @@ import pandas as pd
 
 class StreamlitSurfaceAdapter:
     def publish(self, profile, state, plan, results, verification, replay_events):
+        results_df = pd.DataFrame([
+            {
+                "tool": r.tool,
+                "success": r.success,
+                "category": r.category,
+                "output": r.output,
+                "timestamp": r.timestamp,
+            }
+            for r in results
+        ])
+        if results_df.empty:
+            results_df = pd.DataFrame(columns=["tool", "success", "category", "output", "timestamp"])
+        entities_df = pd.DataFrame(state.entities)
+        if entities_df.empty:
+            entities_df = pd.DataFrame(columns=["type", "id", "status"])
+        evidence_df = pd.DataFrame(state.evidence)
+        if evidence_df.empty:
+            evidence_df = pd.DataFrame(columns=["id", "score", "modality", "title", "snippet"])
+
         return {
             "profile": {
                 "pack_id": profile.pack_id,
@@ -50,16 +69,13 @@ class StreamlitSurfaceAdapter:
             },
             "replay": replay_events,
             "tables": {
-                "results_df": pd.DataFrame([
-                    {"tool": r.tool, "success": r.success, "category": r.category, "output": r.output, "timestamp": r.timestamp}
-                    for r in results
-                ]),
+                "results_df": results_df,
                 "timeline_df": pd.DataFrame([
                     {"time": e["time"], "type": e["type"], "payload": str(e["payload"])}
                     for e in replay_events
                 ]),
-                "entities_df": pd.DataFrame(state.entities),
-                "evidence_df": pd.DataFrame(state.evidence),
+                "entities_df": entities_df,
+                "evidence_df": evidence_df,
             },
         }
 

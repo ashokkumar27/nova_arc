@@ -1,38 +1,34 @@
-# Nova A.R.C. Seamless Harness
+# Nova A.R.C. Command Center — Close-to-Real Build
 
-A pack-driven, agentic harness for future command center use cases.
+A pack-driven agentic harness for future command centers.
 
-This repo keeps one stable runtime and swaps capabilities through bridges:
-- Bedrock Converse for planning/reasoning
-- Nova 2 Sonic bridge for voice streaming
-- Nova Multimodal Embeddings bridge for grounding/retrieval
-- Nova Act bridge for browser automation
+## What this build improves
+- stronger Streamlit UI/UX
+- stricter live Bedrock planner parsing
+- `.env` loading through `python-dotenv`
+- bridge health shown in the UI
+- raw planner output available in debug mode
+- tests for bridge parsing and harness flow
 
-## Modes
-- `demo`: deterministic local behavior for reliable demos
-- `live_bedrock`: real Bedrock planning/reasoning with safe local fallbacks for the rest
-- `live_bridge`: route planning, retrieval, voice, and browser execution through bridge interfaces
-
-## Run
+## Run with uv
 ```bash
-python -m pip install -r requirements.txt
-streamlit run examples/streamlit_app.py
+uv venv
+uv pip install -r requirements.txt
+uv run streamlit run examples/streamlit_app.py
 ```
+
+## Run with live Bedrock
+Create a `.env` file from `.env.example` and set either:
+- `AWS_BEARER_TOKEN_BEDROCK`, or
+- standard `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY`
+
+Then switch the UI to `live_bedrock`.
 
 ## Test
 ```bash
-pytest -q
+uv run pytest -q
 ```
 
-## Structure
-- `nova_arc/core`: harness core
-- `nova_arc/bridges`: stable bridge contracts and adapters
-- `nova_arc/adapters`: perception, planning, and surface layers
-- `nova_arc/tools`: bridge-backed and local tools
-- `nova_arc/packs`: mission packs
-- `tests`: automated tests
-
 ## Notes
-- The bridge interfaces are designed to be swapped with your real backend services without changing the harness.
-- The Bedrock bridge includes a real boto3 integration path when credentials are configured.
-- Sonic and Nova Act are modeled as clean bridge contracts so your integration team can plug them in seamlessly.
+- Bedrock live planner path is real-ready.
+- Nova Act and Nova 2 Sonic stay behind bridge contracts for clean integration.

@@ -19,7 +19,7 @@ class RuntimePerceptionAdapter(PerceptionAdapter):
                 pack_id=profile.pack_id,
             )
         )
-        evidence = evidence_response.result.get("matches", [])
+        evidence = evidence_response.result.get("matches", []) if evidence_response.ok else []
 
         if scenario == "cold_chain":
             return PerceivedState(
@@ -31,9 +31,9 @@ class RuntimePerceptionAdapter(PerceptionAdapter):
                     "Outbound shipment SHP-884 is in active loading window."
                 ),
                 entities=[
-                    {"type": "zone", "id": "Zone-B"},
-                    {"type": "batch", "id": "VX-204"},
-                    {"type": "shipment", "id": "SHP-884"},
+                    {"type": "zone", "id": "Zone-B", "status": "critical"},
+                    {"type": "batch", "id": "VX-204", "status": "at-risk"},
+                    {"type": "shipment", "id": "SHP-884", "status": "loading"},
                 ],
                 hazards=["temperature_excursion", "inventory_spoilage_risk", "regulatory_non_compliance"],
                 signals={
@@ -59,9 +59,9 @@ class RuntimePerceptionAdapter(PerceptionAdapter):
                     "Feeder F-12 is under stress and failure may cascade to Substation East."
                 ),
                 entities=[
-                    {"type": "transformer", "id": "T-17"},
-                    {"type": "feeder", "id": "F-12"},
-                    {"type": "site", "id": "Substation-East"},
+                    {"type": "transformer", "id": "T-17", "status": "critical"},
+                    {"type": "feeder", "id": "F-12", "status": "loaded"},
+                    {"type": "site", "id": "Substation-East", "status": "watch"},
                 ],
                 hazards=["thermal_failure", "arc_fault_risk", "cascading_outage"],
                 signals={

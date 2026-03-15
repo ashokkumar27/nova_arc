@@ -15,6 +15,13 @@ class BridgeRouter:
     voice: object
     browser: object
 
+    def health(self) -> dict:
+        return {
+            "planner": self.planner.health(),
+            "retrieval": self.retrieval.health(),
+            "voice": self.voice.health(),
+            "browser": self.browser.health(),
+        }
 
 
 def build_bridge_router(mode: str = "demo", enable_bedrock: bool = False) -> BridgeRouter:

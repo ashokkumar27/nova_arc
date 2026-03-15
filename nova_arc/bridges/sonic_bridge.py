@@ -8,6 +8,9 @@ from .contracts import BridgeRequest, BridgeResponse, RuntimeBridge
 class NovaSonicBridge(RuntimeBridge):
     backend_name = "sonic"
 
+    def health(self) -> dict:
+        return {"ok": True, "backend": self.backend_name, "detail": "bridge stub ready"}
+
     def invoke(self, request: BridgeRequest) -> BridgeResponse:
         return BridgeResponse(True, self.backend_name, request.operation, {"text": "Voice session acknowledged."})
 
