@@ -22,6 +22,7 @@ CUSTOM_CSS = """
 :root {
   --ink: #f6f8fc;
   --muted: #a9bfd7;
+  --soft-ink: #d7e6f5;
   --bg0: #04111f;
   --bg1: #0c2340;
   --bg2: #173d5e;
@@ -30,6 +31,10 @@ CUSTOM_CSS = """
   --accent: #8ef0cf;
   --warn: #ffb266;
   --danger: #ff7d7d;
+  --sidebar-ink: #e7f0fa;
+  --sidebar-muted: #9bb5cf;
+  --input-bg: rgba(231, 240, 250, 0.96);
+  --input-ink: #14314d;
 }
 [data-testid="stAppViewContainer"] {
   background:
@@ -37,6 +42,17 @@ CUSTOM_CSS = """
     radial-gradient(circle at bottom left, rgba(142, 240, 207, 0.18), transparent 28%),
     linear-gradient(180deg, var(--bg0) 0%, #081827 36%, #0a1d31 100%);
   color: var(--ink);
+}
+header[data-testid="stHeader"] {
+  background: linear-gradient(180deg, rgba(4, 17, 31, 0.96), rgba(4, 17, 31, 0.62));
+  border-bottom: 1px solid rgba(169, 191, 215, 0.12);
+}
+[data-testid="stDecoration"] {
+  background: linear-gradient(90deg, rgba(142, 240, 207, 0.95), rgba(78, 167, 255, 0.95));
+}
+[data-testid="stStatusWidget"] *,
+[data-testid="stToolbar"] * {
+  color: var(--soft-ink) !important;
 }
 .main .block-container {
   padding-top: 1.1rem;
@@ -46,6 +62,66 @@ CUSTOM_CSS = """
 [data-testid="stSidebar"] {
   background: linear-gradient(180deg, rgba(8, 23, 39, 0.98), rgba(10, 32, 54, 0.98));
   border-right: 1px solid rgba(169, 191, 215, 0.12);
+}
+[data-testid="stSidebar"] .block-container {
+  padding-top: 2rem;
+}
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3,
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] .stMarkdown,
+[data-testid="stSidebar"] .stCaption,
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"],
+[data-testid="stSidebar"] [data-baseweb="checkbox"] span,
+[data-testid="stSidebar"] [data-baseweb="radio"] span {
+  color: var(--sidebar-ink) !important;
+}
+[data-testid="stSidebar"] .stCaption,
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {
+  color: var(--sidebar-muted) !important;
+}
+[data-testid="stSidebar"] a {
+  color: #7fc4ff !important;
+}
+[data-testid="stSidebar"] div[data-baseweb="select"] > div,
+[data-testid="stSidebar"] input,
+[data-testid="stSidebar"] textarea {
+  background: var(--input-bg) !important;
+  color: var(--input-ink) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: none !important;
+}
+[data-testid="stSidebar"] textarea::placeholder,
+[data-testid="stSidebar"] input::placeholder {
+  color: rgba(20, 49, 77, 0.65) !important;
+}
+[data-testid="stSidebar"] svg {
+  fill: rgba(20, 49, 77, 0.8) !important;
+}
+[data-testid="stSidebar"] .stButton > button {
+  background: linear-gradient(135deg, #8ef0cf 0%, #58c4ef 100%) !important;
+  color: #082032 !important;
+  border: none !important;
+  font-weight: 800 !important;
+  box-shadow: 0 10px 24px rgba(88, 196, 239, 0.2);
+}
+[data-testid="stSidebar"] .stButton > button:hover {
+  background: linear-gradient(135deg, #a6f7db 0%, #74d3f4 100%) !important;
+  color: #04111f !important;
+}
+[data-testid="stSidebar"] .stButton > button:disabled {
+  background: rgba(148, 163, 184, 0.18) !important;
+  color: rgba(231, 240, 250, 0.45) !important;
+  border: 1px solid rgba(169, 191, 215, 0.12) !important;
+}
+[data-testid="stSidebar"] [data-baseweb="switch"] > div {
+  background-color: rgba(147, 197, 253, 0.26) !important;
+}
+[data-testid="stSidebar"] [data-baseweb="switch"] input:checked + div,
+[data-testid="stSidebar"] [data-baseweb="switch"] div[aria-checked="true"] {
+  background-color: rgba(142, 240, 207, 0.5) !important;
 }
 .hero {
   background:
@@ -109,6 +185,41 @@ CUSTOM_CSS = """
   font-weight: 700;
   color: var(--ink);
   margin-bottom: 12px;
+}
+.stTabs [data-baseweb="tab-list"] {
+  gap: 10px;
+}
+.stTabs [data-baseweb="tab"] {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(169, 191, 215, 0.14);
+  border-radius: 999px;
+  color: var(--soft-ink);
+  font-weight: 700;
+  padding: 8px 16px;
+}
+.stTabs [aria-selected="true"] {
+  background: rgba(142, 240, 207, 0.12) !important;
+  color: var(--accent) !important;
+  border-color: rgba(142, 240, 207, 0.28) !important;
+}
+.stAlert,
+.stSuccess,
+.stWarning,
+.stError,
+.stInfo {
+  color: var(--ink) !important;
+}
+[data-testid="stMetricValue"],
+[data-testid="stMetricLabel"],
+[data-testid="stMetricDelta"] {
+  color: var(--ink) !important;
+}
+[data-testid="stDataFrame"] {
+  border-radius: 18px;
+  overflow: hidden;
+}
+.stJson {
+  border-radius: 16px;
 }
 .divider {
   height: 1px;
