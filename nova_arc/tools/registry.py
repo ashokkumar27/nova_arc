@@ -1,7 +1,14 @@
 class RegisteredTool:
-    def __init__(self, name, category, executor):
+    def __init__(self, name, category, description="", executor=None):
+        if executor is None:
+            if callable(description):
+                executor = description
+                description = ""
+            else:
+                raise TypeError("RegisteredTool requires an executor callable")
         self.name = name
         self.category = category
+        self.description = description
         self._executor = executor
 
     def execute(self, args):
@@ -22,6 +29,16 @@ class ToolRegistry:
 
     def names(self):
         return list(self._tools.keys())
+
+    def describe_all(self):
+        return [
+            {
+                "name": tool.name,
+                "category": tool.category,
+                "description": tool.description,
+            }
+            for tool in self._tools.values()
+        ]
 
     def subset(self, allowed_names):
         subset_registry = ToolRegistry()
