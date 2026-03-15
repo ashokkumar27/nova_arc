@@ -11,6 +11,10 @@ def test_embedding_bridge_search_returns_evidence_cards(backend_client, config):
     assert resp.ok
     assert len(resp.result["matches"]) == 4
     assert resp.result["matches"][0]["source_label"] in {"SOP PDF", "Dashboard Screenshot", "Incident Log", "Prior Incident"}
+    snippets = " ".join(item["snippet"] for item in resp.result["matches"])
+    assert "Tj" not in snippets
+    assert "<text" not in snippets
+    assert "font-size" not in snippets
 
 
 def test_nova_act_bridge_runs_local_admin_workflow(backend_client, config):

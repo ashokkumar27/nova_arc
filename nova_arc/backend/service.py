@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import csv
+import html
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 import json
@@ -42,12 +44,55 @@ def _tokenize(text: str) -> set[str]:
     return set(re.findall(r"[a-z0-9]+", text.lower()))
 
 
+def _normalize_whitespace(text: str) -> str:
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _read_pdf_text(path: Path) -> str:
+    raw_text = path.read_text(encoding="latin-1", errors="ignore")
+    matches = re.findall(r"\((.*?)\)\s*Tj", raw_text, flags=re.S)
+    cleaned = [match.replace(r"\(", "(").replace(r"\)", ")") for match in matches]
+    if cleaned:
+        return _normalize_whitespace(" ".join(cleaned))
+    chunks = [match.decode("utf-8", errors="ignore") for match in re.findall(rb"[A-Za-z0-9][A-Za-z0-9 ,.\-():/]{4,}", path.read_bytes())]
+    return _normalize_whitespace(" ".join(chunks))
+
+
+def _read_svg_text(path: Path) -> str:
+    raw_text = path.read_text(encoding="utf-8")
+    matches = re.findall(r"<text[^>]*>(.*?)</text>", raw_text, flags=re.S)
+    cleaned = [re.sub(r"<[^>]+>", "", html.unescape(match)) for match in matches]
+    return _normalize_whitespace(" ".join(cleaned))
+
+
+def _read_csv_text(path: Path) -> str:
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        rows = []
+        for row in reader:
+            message = row.get("message", "")
+            source = row.get("source", "")
+            timestamp = row.get("timestamp", "")
+            event_type = row.get("event_type", "")
+            rows.append(f"{timestamp} {event_type} {source}: {message}")
+    return _normalize_whitespace(" ".join(rows))
+
+
+def _read_plain_text(path: Path) -> str:
+    raw_text = path.read_text(encoding="utf-8")
+    raw_text = re.sub(r"^#+\s*", "", raw_text, flags=re.M)
+    raw_text = re.sub(r"^\-\s*", "", raw_text, flags=re.M)
+    return _normalize_whitespace(raw_text)
+
+
 def _read_source_text(path: Path) -> str:
     if path.suffix.lower() == ".pdf":
-        raw = path.read_bytes()
-        chunks = [match.decode("utf-8", errors="ignore") for match in re.findall(rb"[A-Za-z0-9][A-Za-z0-9 ,.\-():/]{4,}", raw)]
-        return " ".join(chunks)
-    return path.read_text(encoding="utf-8")
+        return _read_pdf_text(path)
+    if path.suffix.lower() == ".svg":
+        return _read_svg_text(path)
+    if path.suffix.lower() == ".csv":
+        return _read_csv_text(path)
+    return _read_plain_text(path)
 
 
 class CommandCenterBackend:
@@ -556,32 +601,48 @@ class CommandCenterBackend:
             entries = json.loads(manifest_path.read_text(encoding="utf-8"))
             with self._connect() as conn:
                 for entry in entries:
-                    exists = conn.execute(
-                        "SELECT 1 FROM evidence_sources WHERE source_id = ?",
+                    existing = conn.execute(
+                        "SELECT id FROM evidence_sources WHERE source_id = ?",
                         (entry["source_id"],),
                     ).fetchone()
-                    if exists:
-                        continue
                     source_path = manifest_path.parent / entry["path"]
                     content_text = _read_source_text(source_path)
-                    conn.execute(
-                        """
-                        INSERT INTO evidence_sources (
-                            source_id, pack_id, source_type, title, path, content_text, metadata_json, created_at
+                    if existing:
+                        conn.execute(
+                            """
+                            UPDATE evidence_sources
+                            SET pack_id = ?, source_type = ?, title = ?, path = ?, content_text = ?, metadata_json = ?
+                            WHERE source_id = ?
+                            """,
+                            (
+                                pack_id,
+                                entry["source_type"],
+                                entry["title"],
+                                str(source_path),
+                                content_text,
+                                _json_dumps(entry),
+                                entry["source_id"],
+                            ),
                         )
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        (
-                            entry["source_id"],
-                            pack_id,
-                            entry["source_type"],
-                            entry["title"],
-                            str(source_path),
-                            content_text,
-                            _json_dumps(entry),
-                            utc_now(),
-                        ),
-                    )
+                    else:
+                        conn.execute(
+                            """
+                            INSERT INTO evidence_sources (
+                                source_id, pack_id, source_type, title, path, content_text, metadata_json, created_at
+                            )
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            """,
+                            (
+                                entry["source_id"],
+                                pack_id,
+                                entry["source_type"],
+                                entry["title"],
+                                str(source_path),
+                                content_text,
+                                _json_dumps(entry),
+                                utc_now(),
+                            ),
+                        )
 
     def _reset_pack_state(self, pack_id: str) -> None:
         if pack_id == "cold_chain":
@@ -673,14 +734,15 @@ class CommandCenterBackend:
     def _snippet(self, text: str, query_tokens: set[str], size: int = 180) -> str:
         if not text:
             return ""
-        lowered = text.lower()
+        normalized_text = _normalize_whitespace(text)
+        lowered = normalized_text.lower()
         for token in query_tokens:
             index = lowered.find(token)
             if index >= 0:
                 start = max(0, index - 40)
-                end = min(len(text), index + size)
-                return text[start:end].replace("\n", " ")
-        return text[:size].replace("\n", " ")
+                end = min(len(normalized_text), index + size)
+                return normalized_text[start:end]
+        return normalized_text[:size]
 
     def _parse_cold_chain_signals(self, transcript: str) -> Dict[str, Any]:
         zone_match = re.search(r"zone\s+([a-z])", transcript, flags=re.I)

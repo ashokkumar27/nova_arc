@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
 
 import streamlit as st
 
@@ -255,13 +256,14 @@ def render_bridge_health(bridge_health: dict):
 
 def render_evidence_cards(evidence: list[dict]):
     for item in evidence:
+        source_name = Path(item.get("path", "")).name if item.get("path") else "n/a"
         st.markdown(
             f"""
             <div class="card">
               <div class="status-pill">{item.get('source_label', item.get('modality', 'Evidence'))}</div>
               <h4>{item.get('title', 'Evidence')}</h4>
-              <div class="meta">Score: {item.get('score', 'n/a')} | Path: {item.get('path', '')}</div>
-              <p style="margin-top:10px;">{item.get('snippet', '')}</p>
+              <div class="meta">Score: {item.get('score', 'n/a')} | Source file: {source_name}</div>
+              <p style="margin-top:10px; line-height: 1.65; color: var(--soft-ink);">{item.get('snippet', '')}</p>
             </div>
             """,
             unsafe_allow_html=True,
